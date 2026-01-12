@@ -78,46 +78,60 @@ Global settings that persist across sessions.
 
 ---
 
-### 3.2 Configure Tab (New — Like Bloom's Configure View)
-A stepped configuration flow before running evals.
+### 3.2 Configure Tab — Skill-First Approach
+A streamlined configuration flow where **skill files are the source of truth**.
 
-#### Step 1: What Are You Testing?
-> "What kind of skill are you evaluating?"
+No preset categories. Instead, the AI reads the uploaded skills and generates appropriate configuration.
 
-**Preset Categories:**
-- 🎨 Frontend/UI Design (current default)
-- 💻 Backend/Code Generation
-- ✍️ Writing & Content
-- 📊 Data Analysis
-- 🔍 Research & Summarization
-- 🧩 Custom / Other
+#### Step 1: Upload Skills
+Upload two skill files to compare. This is the **first step** (after API key).
 
-Each category pre-fills:
-- Suggested system prompt
-- Appropriate judge criteria
-- Example prompts to get started
-
-User can also start from scratch.
-
----
-
-#### Step 2: Upload Skills
-Upload two skill files to compare.
-
-- Skill A: `[Upload .md]` | `[Paste text]`
-- Skill B: `[Upload .md]` | `[Paste text]`
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Upload Skills to Compare                                    │
+│                                                             │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐  │
+│  │                         │  │                         │  │
+│  │     📄 Skill A          │  │     📄 Skill B          │  │
+│  │                         │  │                         │  │
+│  │   Drop .md or click     │  │   Drop .md or click     │  │
+│  │                         │  │                         │  │
+│  └─────────────────────────┘  └─────────────────────────┘  │
+│                                                             │
+│  Recent skills: [skill-v1.md ▼] [skill-v2.md ▼]             │
+└─────────────────────────────────────────────────────────────┘
+```
 
 **Convenience Features:**
-- "Use same base, different versions" toggle
 - Preview/expand uploaded skill content
 - Recent skills dropdown (from localStorage)
+- Paste text directly instead of uploading
 
 ---
 
-#### Step 3: Configure Evaluation
-> "What should the judge see?"
+#### Step 2: Configure Evaluation
+A **single unified page** with all configurable fields. Each field can be:
+- Auto-generated from skill analysis
+- Manually set or edited
 
-**Output Type Selection:**
+**Top-Level Auto-Generation:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Configure Evaluation                                        │
+│                                                             │
+│  [✨ Generate All from Skills]                               │
+│  Analyze uploaded skills and auto-fill all fields below     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Clicking "Generate All" analyzes both skill files and populates:
+- Output type (inferred from skill domain)
+- Judge criteria (based on what the skill claims to do)
+- Prompt suggestions (appropriate for the skill's focus areas)
+
+---
+
+**Output Type Selection** [✨ Auto]
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  What type of output will your skill produce?               │
@@ -134,114 +148,61 @@ Upload two skill files to compare.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Judge Criteria Configuration:**
+---
 
-**Three Options:**
-
-**A) Use Preset Criteria**
-- Pre-built criteria sets based on category from Step 1
-- One click to apply
-
-Default presets per category:
-
-| Category | Criteria |
-|----------|----------|
-| Frontend/UI | Prompt Adherence, Aesthetic Fit, Visual Polish, UX/Usability, Creative Distinction |
-| Backend/Code | Correctness, Code Quality, Efficiency, Documentation, Edge Cases |
-| Writing | Clarity, Accuracy, Engagement, Structure, Voice/Tone |
-| Data Analysis | Accuracy, Insight Depth, Visualization, Methodology, Actionability |
-| Research | Thoroughness, Source Quality, Synthesis, Relevance, Objectivity |
-
-**B) Generate Criteria (AI-Powered)**
-- User describes what aspects matter for their specific evaluation
-- AI generates 5 criteria with names, descriptions, and scoring rubrics
-- Uses our existing frontend criteria as the example format
-
-Example workflow:
+**Judge Criteria** [✨ Auto]
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  📝 What should the judge evaluate?                          │
+│  Scoring Criteria                                            │
 │                                                             │
-│  ┌───────────────────────────────────────────────────────┐ │
-│  │ I'm testing SQL query generation. I care about query  │ │
-│  │ correctness, performance, readability, handling edge  │ │
-│  │ cases, and proper indexing suggestions.               │ │
-│  └───────────────────────────────────────────────────────┘ │
+│  1. [Criterion Name] ────────────────── (1-5)  [✎] [×]     │
+│     Description of what this measures                        │
 │                                                             │
-│  [✨ Generate Criteria]                                      │
+│  2. [Criterion Name] ────────────────── (1-5)  [✎] [×]     │
+│     Description of what this measures                        │
+│                                                             │
+│  3. [Criterion Name] ────────────────── (1-5)  [✎] [×]     │
+│     Description of what this measures                        │
+│                                                             │
+│  [+ Add Criterion]                                           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Generated output (editable):
-```
-### 1. Query Correctness (1-5)
-Does the query return the expected results?
-- 5: Perfectly correct, handles all specified conditions
-- 3: Mostly correct but misses edge cases
-- 1: Returns wrong results or errors
-
-### 2. Performance Optimization (1-5)
-...
-```
-
-**C) Custom Criteria (Manual)**
-- Add/remove criteria manually
-- Edit criterion names and descriptions
-- Set point values (1-5 or 1-10)
+Each criterion has:
+- Name (e.g., "Prompt Adherence")
+- Description (what judges should look for)
+- Score range (default 1-5)
+- Edit and delete buttons
 
 ---
 
-#### Step 4: Build Your Prompt Bank
-> "What prompts will you test?"
-
-**Three Options:**
-
-**A) Manual Entry**
-- Same as current: add prompts one by one
-- +/- buttons, text areas
-
-**B) Use Example Bank**
-- Show existing prompts from a JSON file
-- User can browse, select, or "use all"
-- Filter/search within bank
-
-**C) Generate New Bank (AI-Powered)**
-- User describes what they want to test
-- AI generates 10-50 prompts appropriate for:
-  - The skill category
-  - The uploaded skill files
-  - Any user notes/focus areas
-
-Example workflow:
+**Prompts** [✨ Auto]
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  📝 Describe what you want to test                          │
+│  Test Prompts (12)                                           │
 │                                                             │
-│  ┌───────────────────────────────────────────────────────┐ │
-│  │ I want to test prompts that challenge the skill to    │ │
-│  │ build responsive layouts, handle dark mode, and       │ │
-│  │ create accessible forms.                              │ │
-│  └───────────────────────────────────────────────────────┘ │
+│  1. "Build a responsive landing page for..."     [✎] [×]   │
+│  2. "Create a dark mode toggle..."               [✎] [×]   │
+│  3. "Design an accessible form..."               [✎] [×]   │
+│  ...                                                        │
 │                                                             │
-│  How many prompts?  [10 ▼]                                  │
-│                                                             │
-│  [✨ Generate Prompts]                                       │
+│  [+ Add Prompt]  [📁 Import JSON]  [🔀 Shuffle]             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-After generation:
-- Show preview of all generated prompts
-- User can edit, delete, regenerate individual prompts
-- "Use These" button to proceed
+Prompts can be:
+- Auto-generated from skills
+- Added manually one-by-one
+- Imported from a JSON file
+- Edited or removed individually
 
 ---
 
-#### Step 5: Review & Start
+#### Step 3: Review & Start
 Summary of configuration:
-- Category: Frontend/UI Design
 - Skills: `skill-a.md` vs `skill-b.md`
 - Output Type: Visual (Screenshot)
-- Judge Criteria: 5 default criteria
+- Judge Criteria: 5 criteria configured
 - Prompts: 15 prompts loaded
 
 **[🚀 Start Evaluation]**
@@ -357,6 +318,236 @@ if (state.config.outputType === 'text' || state.config.outputType === 'both') {
 
 ---
 
+### 4.5 Auto-Generation Prompt Strategy
+
+The "Generate from Skills" feature requires carefully designed prompts to produce consistent, useful results.
+
+#### What We Send to the API
+
+**Context Payload:**
+```javascript
+{
+  skillA: {
+    filename: "frontend-design-v2.md",
+    content: "<full skill file content>"
+  },
+  skillB: {
+    filename: "frontend-design-v1.md", 
+    content: "<full skill file content>"
+  },
+  generationType: "all" | "criteria" | "prompts" | "outputType",
+  promptCount: 50  // User-configurable, default 50
+}
+```
+
+**Model & Token Configuration:**
+- **Model:** `claude-sonnet-4-20250514` (cost-effective for config generation)
+- **Max Tokens:** `8192` (sufficient for 50+ prompts + criteria in JSON)
+- **Response Format:** `{ type: "json_object" }` for structured output
+
+> **Note:** Sonnet's 200k context window easily accommodates two full skill files (~10-20k tokens each) plus the system prompt and example (~5k tokens), leaving ample room for generation.
+
+#### System Prompt for Auto-Generation
+
+```
+You are a configuration generator for an AI skill evaluation tool.
+
+Given two skill files that will be compared against each other, analyze them and generate appropriate evaluation configuration.
+
+Your task is to understand:
+1. What domain/task the skills are designed for
+2. What kind of output the skills will produce
+3. What criteria would fairly evaluate their outputs
+4. What prompts would effectively test their capabilities
+
+## Output Type Inference
+
+Analyze the skill to determine output type:
+- "visual" if skills produce HTML/CSS, UI components, or visual artifacts
+- "text" if skills produce code, text, data, or non-visual outputs  
+- "both" if outputs benefit from seeing both rendered result AND source
+
+## Criteria Generation Guidelines
+
+Generate 4-6 criteria that:
+- Are specific to what these skills claim to do
+- Can be objectively evaluated (not vague)
+- Cover different aspects (correctness, quality, style, edge cases)
+- Each have a clear 1-5 scoring rubric
+
+## Prompt Generation Guidelines
+
+Generate the requested number of prompts (user-configurable, default 50) that:
+- Actually test what the skills claim to do
+- Vary in difficulty (roughly 20% easy, 60% medium, 20% hard)
+- Cover different aspects mentioned in the skills
+- Are realistic user requests, not artificial tests
+- Include edge cases and challenging scenarios
+```
+
+#### Example: Frontend Design Skill (Reference Implementation)
+
+This is the example we include in the prompt to show the expected format:
+
+```json
+// EXAMPLE INPUT: Two versions of a frontend design skill
+// EXAMPLE OUTPUT:
+{
+  "outputType": "visual",
+  "outputTypeReasoning": "Skills produce HTML/CSS components that should be visually evaluated",
+  
+  "criteria": [
+    {
+      "id": "prompt_adherence",
+      "name": "Prompt Adherence",
+      "description": "How well does the output match what was requested?",
+      "rubric": {
+        "5": "Perfectly matches all requirements with thoughtful extras",
+        "4": "Matches all explicit requirements",
+        "3": "Matches most requirements, minor omissions",
+        "2": "Partial match, significant gaps",
+        "1": "Does not address the prompt"
+      }
+    },
+    {
+      "id": "visual_polish",
+      "name": "Visual Polish",
+      "description": "Quality of typography, spacing, color, and visual details",
+      "rubric": {
+        "5": "Premium, refined visual execution",
+        "4": "Clean and professional",
+        "3": "Acceptable but generic",
+        "2": "Noticeable visual issues",
+        "1": "Poor or broken visual presentation"
+      }
+    },
+    {
+      "id": "ux_usability",
+      "name": "UX & Usability",
+      "description": "Interactive elements, accessibility, responsive behavior",
+      "rubric": {
+        "5": "Excellent UX with thoughtful interactions",
+        "4": "Good usability, works well",
+        "3": "Functional but could be improved",
+        "2": "Usability issues present",
+        "1": "Unusable or inaccessible"
+      }
+    },
+    {
+      "id": "code_quality",
+      "name": "Code Quality",
+      "description": "Clean, semantic HTML/CSS, proper structure",
+      "rubric": {
+        "5": "Exemplary code organization and semantics",
+        "4": "Good code quality",
+        "3": "Functional but messy",
+        "2": "Poor organization or practices",
+        "1": "Broken or unmaintainable code"
+      }
+    },
+    {
+      "id": "creative_distinction",
+      "name": "Creative Distinction",
+      "description": "Originality and memorability of the design",
+      "rubric": {
+        "5": "Highly original, memorable design",
+        "4": "Shows creativity beyond templates",
+        "3": "Competent but unremarkable",
+        "2": "Generic or derivative",
+        "1": "No creative effort evident"
+      }
+    }
+  ],
+  
+  "prompts": [
+    "Build a responsive landing page for a SaaS product that helps teams track OKRs",
+    "Create a dark mode toggle component with smooth transitions",
+    "Design an accessible contact form with validation feedback",
+    "Build a pricing table with three tiers and a toggle for monthly/annual",
+    "Create a testimonial carousel with customer photos and quotes",
+    "Design a mobile navigation menu with hamburger icon animation",
+    "Build a hero section with a gradient background and CTA button",
+    "Create a footer with newsletter signup and social links",
+    "Design a feature comparison grid for a product page",
+    "Build a loading skeleton screen for a card-based layout"
+  ]
+}
+```
+
+#### Making Generation Robust
+
+**Key strategies:**
+
+1. **Include the example as few-shot context** — The frontend example above is always included, with a note that it should be adapted to the actual skill domain.
+
+2. **Structured JSON output** — Request JSON with a strict schema. Use `response_format: { type: "json_object" }` if available.
+
+3. **Validation layer** — After generation, validate:
+   - All required fields present
+   - Criteria have valid rubrics (5 levels)
+   - Prompts are non-empty strings
+   - Output type is one of the valid enum values
+
+4. **Fallback defaults** — If generation fails or produces invalid output:
+   - Use generic criteria (Correctness, Quality, Completeness)
+   - Prompt user to manually enter prompts
+   - Default to "text" output type
+
+5. **User validation step** — After generation, always show results for review before proceeding. Users can edit, remove, or regenerate individual items.
+
+#### Per-Field Regeneration
+
+The [✨ Auto] buttons on each field use the same prompt strategy but with a narrower `generationType`:
+
+```javascript
+// Just regenerate criteria
+const response = await generateFromSkills({
+  skillA, skillB,
+  generationType: 'criteria',
+  existingConfig: {
+    outputType: 'visual', // Keep current
+    prompts: [...] // Keep current
+  }
+});
+```
+
+This allows users to regenerate just the prompts while keeping their customized criteria, or vice versa.
+
+#### Caching Strategy
+
+To avoid redundant API calls, cache generated configurations:
+
+```javascript
+// Generate hash from skill contents
+const skillHash = await crypto.subtle.digest('SHA-256', 
+  new TextEncoder().encode(skillA.content + skillB.content)
+);
+const cacheKey = `skill_eval_config_${btoa(skillHash)}`;
+
+// Check cache before API call
+const cached = localStorage.getItem(cacheKey);
+if (cached) {
+  const { config, timestamp } = JSON.parse(cached);
+  // Cache valid for 24 hours
+  if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+    return config;
+  }
+}
+
+// After successful generation
+localStorage.setItem(cacheKey, JSON.stringify({
+  config: generatedConfig,
+  timestamp: Date.now()
+}));
+```
+
+**Cache invalidation:**
+- Skill content changes → new hash → cache miss
+- User clicks "Regenerate" → bypass cache, update stored value
+- 24-hour TTL as safety net
+
+---
+
 ## 5. Key UX Improvements
 
 ### 5.1 API Key Warnings
@@ -382,23 +573,24 @@ If no config exists:
 ---
 
 ### 5.3 Progressive Disclosure
-- Start with simple presets (category selection)
+- Start with skills upload (required first step)
+- "Generate All" button for instant configuration
 - "Advanced" toggles for:
-  - Custom criteria
   - System prompt editing
   - Model selection
   - Max tokens
 
-Most users: pick category → upload skills → generate prompts → run
-Power users: customize everything
+Most users: upload skills → Generate All → run
+Power users: customize criteria, prompts, and advanced settings
 
 ---
 
 ### 5.4 Smart Defaults
-Based on category selection, pre-fill:
-- System prompt
-- Judge criteria
-- Suggested max tokens
+Based on skill analysis, pre-fill:
+- Output type (inferred from skill domain)
+- Judge criteria (extracted from skill goals)
+- Prompt suggestions (based on skill focus areas)
+- System prompt (generic unless customized)
 - Model recommendations (e.g., Opus for judging)
 
 ---
