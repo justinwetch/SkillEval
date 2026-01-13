@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { EvalConfigProvider } from './contexts/EvalConfigContext'
+import { EvalRunProvider } from './contexts/EvalRunContext'
 import Layout from './components/Layout'
 import HomeView from './views/HomeView'
 import ConfigureView from './views/ConfigureView'
@@ -11,17 +12,19 @@ function App() {
   return (
     <SettingsProvider>
       <EvalConfigProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<HomeView />} />
-              <Route path="configure" element={<ConfigureView />} />
-              <Route path="evaluate" element={<EvaluateView />} />
-              <Route path="settings" element={<SettingsView />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <EvalRunProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<HomeView />} />
+                <Route path="configure" element={<ConfigureView />} />
+                <Route path="evaluate" element={<EvaluateView />} />
+                <Route path="settings" element={<SettingsView />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </EvalRunProvider>
       </EvalConfigProvider>
     </SettingsProvider>
   )

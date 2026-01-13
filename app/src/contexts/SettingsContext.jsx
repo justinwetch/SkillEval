@@ -11,9 +11,8 @@ const STORAGE_KEYS = {
 
 const DEFAULT_SETTINGS = {
     apiKey: '',
-    apiKeyValid: null, // null = unchecked, true/false = validated
-    defaultGenModel: 'claude-sonnet-4-5-20250514',
-    defaultJudgeModel: 'claude-opus-4-5-20250514',
+    defaultGenModel: 'claude-sonnet-4-5-20250929',
+    defaultJudgeModel: 'claude-opus-4-5-20251101',
     theme: 'dark',
 }
 
@@ -22,7 +21,6 @@ export function SettingsProvider({ children }) {
         // Load from localStorage on init
         return {
             apiKey: localStorage.getItem(STORAGE_KEYS.API_KEY) || DEFAULT_SETTINGS.apiKey,
-            apiKeyValid: null,
             defaultGenModel: localStorage.getItem(STORAGE_KEYS.DEFAULT_GEN_MODEL) || DEFAULT_SETTINGS.defaultGenModel,
             defaultJudgeModel: localStorage.getItem(STORAGE_KEYS.DEFAULT_JUDGE_MODEL) || DEFAULT_SETTINGS.defaultJudgeModel,
             theme: localStorage.getItem(STORAGE_KEYS.THEME) || DEFAULT_SETTINGS.theme,
@@ -48,63 +46,21 @@ export function SettingsProvider({ children }) {
 
     const setApiKey = (key) => {
         updateSetting('apiKey', key)
-        updateSetting('apiKeyValid', null) // Reset validation when key changes
-    }
-
-    const setApiKeyValid = (valid) => {
-        updateSetting('apiKeyValid', valid)
     }
 
     const toggleTheme = () => {
         updateSetting('theme', settings.theme === 'dark' ? 'light' : 'dark')
     }
 
-    const validateApiKey = async () => {
-        if (!settings.apiKey) {
-            setApiKeyValid(false)
-            return false
-        }
-
-        try {
-            // Make a minimal API call to validate the key
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': settings.apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'anthropic-dangerous-direct-browser-access': 'true',
-                },
-                body: JSON.stringify({
-                    model: 'claude-haiku-4-5-20250514',
-                    max_tokens: 1,
-                    messages: [{ role: 'user', content: 'Hi' }],
-                }),
-            })
-
-            const valid = response.ok || response.status === 400 // 400 means key is valid but request may be malformed
-            setApiKeyValid(valid)
-            return valid
-        } catch (error) {
-            // Network error or CORS - key might still be valid
-            // For browser-side, we'll assume valid if we get a response
-            setApiKeyValid(false)
-            return false
-        }
-    }
-
-    const hasValidApiKey = settings.apiKey && settings.apiKeyValid === true
-    const needsApiKey = !settings.apiKey || settings.apiKeyValid === false
+    // Simple check - just see if key exists
+    const needsApiKey = !settings.apiKey
 
     return (
         <SettingsContext.Provider value={{
             settings,
             updateSetting,
             setApiKey,
-            setApiKeyValid,
-            validateApiKey,
             toggleTheme,
-            hasValidApiKey,
             needsApiKey,
         }}>
             {children}

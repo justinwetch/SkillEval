@@ -1,48 +1,29 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Check, X, Loader2, Trash2, Key, Cpu } from 'lucide-react'
+import { Eye, EyeOff, Trash2, Key, Cpu } from 'lucide-react'
 import { useSettings } from '../contexts/SettingsContext'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import Badge from '../components/Badge'
 
 const MODELS = [
-    { value: 'claude-haiku-4-5-20250514', label: 'Claude Haiku 4.5', speed: 'Fast' },
-    { value: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5', speed: 'Balanced' },
-    { value: 'claude-opus-4-5-20250514', label: 'Claude Opus 4.5', speed: 'Powerful' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', speed: 'Fast' },
+    { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', speed: 'Balanced' },
+    { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5', speed: 'Powerful' },
 ]
 
 function SettingsView() {
     const {
         settings,
         setApiKey,
-        validateApiKey,
         updateSetting,
     } = useSettings()
 
     const [showApiKey, setShowApiKey] = useState(false)
-    const [validating, setValidating] = useState(false)
-
-    const handleValidateKey = async () => {
-        setValidating(true)
-        await validateApiKey()
-        setValidating(false)
-    }
 
     const handleClearData = () => {
         if (window.confirm('Are you sure you want to clear all saved data? This cannot be undone.')) {
             localStorage.clear()
             window.location.reload()
         }
-    }
-
-    const getValidationBadge = () => {
-        if (settings.apiKeyValid === null) {
-            return <Badge variant="default">Not validated</Badge>
-        }
-        if (settings.apiKeyValid === true) {
-            return <Badge variant="success"><Check size={12} className="mr-1" /> Valid</Badge>
-        }
-        return <Badge variant="error"><X size={12} className="mr-1" /> Invalid</Badge>
     }
 
     return (
@@ -64,19 +45,16 @@ function SettingsView() {
                         <Key size={22} strokeWidth={1.5} />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                                API Key
-                            </h2>
-                            {getValidationBadge()}
-                        </div>
+                        <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-1">
+                            API Key
+                        </h2>
                         <p className="text-sm text-[var(--color-text-muted)]">
                             Required — stored locally in your browser
                         </p>
                     </div>
                 </div>
 
-                <div className="space-y-5">
+                <div className="space-y-4">
                     <div className="relative">
                         <input
                             type={showApiKey ? 'text' : 'password'}
@@ -94,34 +72,17 @@ function SettingsView() {
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={handleValidateKey}
-                            disabled={!settings.apiKey || validating}
+                    <span className="text-sm text-[var(--color-text-muted)]">
+                        Get your key from{' '}
+                        <a
+                            href="https://console.anthropic.com/settings/keys"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[var(--color-accent)] hover:underline"
                         >
-                            {validating ? (
-                                <>
-                                    <Loader2 size={14} className="animate-spin" />
-                                    Validating...
-                                </>
-                            ) : (
-                                'Validate Key'
-                            )}
-                        </Button>
-                        <span className="text-sm text-[var(--color-text-muted)]">
-                            Get your key from{' '}
-                            <a
-                                href="https://console.anthropic.com/settings/keys"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[var(--color-accent)] hover:underline"
-                            >
-                                console.anthropic.com
-                            </a>
-                        </span>
-                    </div>
+                            console.anthropic.com
+                        </a>
+                    </span>
                 </div>
             </Card>
 

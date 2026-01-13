@@ -6,7 +6,7 @@
 import { callAnthropic } from './api';
 import { getSkillHash, getCachedConfig, setCachedConfig } from './cache';
 
-const GENERATION_MODEL = 'claude-sonnet-4-20250514';
+const GENERATION_MODEL = 'claude-sonnet-4-5-20250929';
 
 const SYSTEM_PROMPT = `You are a configuration generator for an AI skill evaluation tool.
 

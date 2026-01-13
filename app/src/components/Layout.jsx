@@ -16,9 +16,9 @@ function Layout() {
         <div className="min-h-screen bg-[var(--color-bg-primary)] transition-colors duration-200">
             {/* Header */}
             <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-[var(--color-border)]">
-                <div className="max-w-5xl mx-auto px-8 h-16 flex items-center justify-between">
-                    {/* Logo */}
-                    <NavLink to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div className="max-w-5xl mx-auto px-8 h-16 flex items-center justify-center relative">
+                    {/* Logo - Positioned Left */}
+                    <NavLink to="/" className="absolute left-8 flex items-center gap-3 hover:opacity-80 transition-opacity">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-accent)] to-[#B85D3F] flex items-center justify-center shadow-lg shadow-[var(--color-accent)]/20">
                             <FlaskConical size={18} strokeWidth={2} className="text-white" />
                         </div>
@@ -27,7 +27,7 @@ function Layout() {
                         </span>
                     </NavLink>
 
-                    {/* Navigation */}
+                    {/* Navigation - Centered */}
                     <nav className="flex items-center gap-1">
                         {navItems.map(({ path, label, icon: Icon }) => (
                             <NavLink
@@ -47,10 +47,10 @@ function Layout() {
                         ))}
                     </nav>
 
-                    {/* Theme Toggle */}
+                    {/* Theme Toggle - Positioned Right */}
                     <button
                         onClick={toggleTheme}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-elevated)] transition-all"
+                        className="absolute right-8 w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-elevated)] transition-all"
                         aria-label={`Switch to ${settings.theme === 'dark' ? 'light' : 'dark'} mode`}
                     >
                         {settings.theme === 'dark' ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}

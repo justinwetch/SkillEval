@@ -17,7 +17,7 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
  */
 export async function callAnthropic({
     apiKey,
-    model = 'claude-sonnet-4-20250514',
+    model = 'claude-sonnet-4-5-20250929',
     systemPrompt,
     messages,
     maxTokens = 8192,
