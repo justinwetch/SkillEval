@@ -53,9 +53,11 @@ function HomeView() {
                 <h1 className="text-5xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-6 leading-tight">
                     A/B Test Your AI Skills
                 </h1>
-                <p className="text-lg text-[var(--color-text-secondary)] max-w-xl mx-auto mb-10 leading-relaxed">
-                    Compare two skill.md files side-by-side. Run the same prompts against both,
-                    let an AI judge score the outputs, and see which skill performs better.
+                <p
+                    className="text-lg text-[var(--color-text-secondary)] leading-relaxed text-center"
+                    style={{ maxWidth: '580px', margin: '0 auto 40px auto' }}
+                >
+                    Compare two skill.md files side-by-side. Run the same prompts against both, let an AI judge score the outputs, and see which skill performs better.
                 </p>
                 <div className="flex justify-center gap-4">
                     {needsApiKey ? (
@@ -143,8 +145,8 @@ function HomeView() {
 
             {/* CTA Footer */}
             <section>
-                <Card padding="none" className="p-10 text-center bg-gradient-to-br from-[var(--color-bg-secondary)] to-[var(--color-bg-tertiary)]">
-                    <p className="text-[var(--color-text-muted)] text-sm uppercase tracking-wider mb-4">
+                <Card padding="none" className="text-center bg-gradient-to-br from-[var(--color-bg-secondary)] to-[var(--color-bg-tertiary)]" style={{ padding: '48px 32px' }}>
+                    <p className="text-[var(--color-text-muted)] text-sm uppercase tracking-wider" style={{ marginBottom: '24px' }}>
                         Ready to get started?
                     </p>
                     <div className="flex justify-center gap-4">
