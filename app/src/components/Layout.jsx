@@ -71,16 +71,15 @@ function Layout() {
             {/* Footer */}
             <footer className="border-t border-[var(--color-border)] py-6 bg-[var(--color-bg-secondary)]">
                 <div className="max-w-5xl mx-auto px-8 text-center text-sm text-[var(--color-text-muted)]">
+                    <span>Created by </span>
                     <a
-                        href="https://github.com/justinwetch/SkillEval"
+                        href="https://www.justinwetch.com"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] transition-colors"
                     >
-                        Skill Evaluator
+                        Justin Wetch
                     </a>
-                    <span className="mx-2 text-[var(--color-border)]">·</span>
-                    <span>Open source A/B testing for AI skills</span>
                 </div>
             </footer>
         </div>
