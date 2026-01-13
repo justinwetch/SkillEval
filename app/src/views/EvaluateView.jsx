@@ -291,7 +291,7 @@ function EvaluateView() {
                         </select>
                         {/* Run All Button */}
                         <Button
-                            onClick={runGenerations}
+                            onClick={() => runGenerations(generationModel)}
                             disabled={runStatus !== 'idle'}
                         >
                             {runStatus === 'generating' ? (
@@ -413,7 +413,7 @@ function EvaluateView() {
                             <option value="claude-opus-4-5-20251101">Opus 4.5</option>
                         </select>
                         <Button
-                            onClick={runJudgments}
+                            onClick={() => runJudgments(judgeModel)}
                             disabled={runStatus !== 'idle' || !stats.canJudge}
                         >
                             {runStatus === 'judging' ? (

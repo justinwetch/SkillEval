@@ -60,7 +60,7 @@ export function EvalRunProvider({ children }) {
     }, [config.prompts, persistEvaluations]);
 
     // Run all generations
-    const runGenerations = useCallback(async () => {
+    const runGenerations = useCallback(async (model) => {
         if (!settings.apiKey) {
             setRunError('API key is required');
             return false;
@@ -80,7 +80,7 @@ export function EvalRunProvider({ children }) {
                 skillA: config.skillA,
                 skillB: config.skillB,
                 prompts: config.prompts,
-                model: settings.defaultGenModel || 'claude-sonnet-4-5-20250929',
+                model: model || settings.defaultGenModel || 'claude-sonnet-4-5-20250929',
                 maxTokens: 8192,
                 onProgress: (p) => setProgress(p)
             });
@@ -99,7 +99,7 @@ export function EvalRunProvider({ children }) {
     }, [settings, config, initializeEvaluations, persistEvaluations]);
 
     // Run all judgments
-    const runJudgments = useCallback(async () => {
+    const runJudgments = useCallback(async (judgeModel) => {
         if (!settings.apiKey) {
             setRunError('API key is required');
             return false;
@@ -115,7 +115,7 @@ export function EvalRunProvider({ children }) {
                 evaluations: [...evaluations],
                 criteria: config.criteria,
                 outputType: config.outputType,
-                judgeModel: settings.defaultJudgeModel || 'claude-sonnet-4-5-20250929',
+                judgeModel: judgeModel || settings.defaultJudgeModel || 'claude-sonnet-4-5-20250929',
                 skillNames: {
                     skillA: config.skillA.filename || 'Skill A',
                     skillB: config.skillB.filename || 'Skill B'
