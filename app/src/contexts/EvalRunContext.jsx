@@ -80,7 +80,7 @@ export function EvalRunProvider({ children }) {
                 skillA: config.skillA,
                 skillB: config.skillB,
                 prompts: config.prompts,
-                model: model || settings.defaultGenModel || 'claude-sonnet-4-5-20250929',
+                model: model || settings.defaultGenModel || 'claude-sonnet-4-6-20260217',
                 maxTokens: 8192,
                 onProgress: (p) => setProgress(p)
             });
@@ -115,7 +115,7 @@ export function EvalRunProvider({ children }) {
                 evaluations: [...evaluations],
                 criteria: config.criteria,
                 outputType: config.outputType,
-                judgeModel: judgeModel || settings.defaultJudgeModel || 'claude-sonnet-4-5-20250929',
+                judgeModel: judgeModel || settings.defaultJudgeModel || 'claude-sonnet-4-6-20260217',
                 skillNames: {
                     skillA: config.skillA.filename || 'Skill A',
                     skillB: config.skillB.filename || 'Skill B'

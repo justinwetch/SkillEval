@@ -76,11 +76,13 @@ Choose which model to evaluate your skills with. Different models may respond di
 
 | Model | Characteristics |
 |-------|-----------------|
+| **Sonnet 4.6** | Balanced capability and speed (default) |
+| **Opus 4.6** | Most capable, highest quality outputs (default judge) |
 | **Haiku 4.5** | Fast, cost-effective, good for iteration |
-| **Sonnet 4.5** | Balanced capability and speed |
-| **Opus 4.5** | Most capable, highest quality outputs |
+| **Sonnet 4.5** | Legacy, still available |
+| **Opus 4.5** | Legacy, still available |
 
-For judging, **Opus 4.5** is recommended since it's the most capable model and provides the most nuanced scoring. That said, you can use Sonnet or Haiku for faster/cheaper judging, or to test how different judges evaluate the same outputs.
+For judging, **Opus 4.6** is recommended since it's the most capable model and provides the most nuanced scoring. Sonnet 4.6 is the default for generation. The 4.5 models remain available for comparison or cost-sensitive workflows.
 
 ---
 

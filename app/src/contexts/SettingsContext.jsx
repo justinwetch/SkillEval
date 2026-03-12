@@ -11,8 +11,8 @@ const STORAGE_KEYS = {
 
 const DEFAULT_SETTINGS = {
     apiKey: '',
-    defaultGenModel: 'claude-sonnet-4-5-20250929',
-    defaultJudgeModel: 'claude-opus-4-5-20251101',
+    defaultGenModel: 'claude-sonnet-4-6-20260217',
+    defaultJudgeModel: 'claude-opus-4-6-20260205',
     theme: 'dark',
 }
 

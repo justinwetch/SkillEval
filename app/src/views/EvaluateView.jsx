@@ -46,8 +46,8 @@ function EvaluateView() {
     const [showAllPrompts, setShowAllPrompts] = useState(false)
     const [editingPromptIdx, setEditingPromptIdx] = useState(null)
     const [screenshotServerStatus, setScreenshotServerStatus] = useState(null)
-    const [generationModel, setGenerationModel] = useState('claude-sonnet-4-5-20250929')
-    const [judgeModel, setJudgeModel] = useState('claude-opus-4-5-20251101')
+    const [generationModel, setGenerationModel] = useState('claude-sonnet-4-6-20260217')
+    const [judgeModel, setJudgeModel] = useState('claude-opus-4-6-20260205')
 
     // Check screenshot server on mount and when output type changes
     useEffect(() => {
@@ -286,7 +286,9 @@ function EvaluateView() {
                             className="text-sm px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[#F5E6D3] text-[#2D2018] font-medium"
                         >
                             <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
+                            <option value="claude-sonnet-4-6-20260217">Sonnet 4.6</option>
                             <option value="claude-sonnet-4-5-20250929">Sonnet 4.5</option>
+                            <option value="claude-opus-4-6-20260205">Opus 4.6</option>
                             <option value="claude-opus-4-5-20251101">Opus 4.5</option>
                         </select>
                         {/* Run All Button */}
@@ -409,7 +411,9 @@ function EvaluateView() {
                             className="text-sm px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[#F5E6D3] text-[#2D2018] font-medium"
                         >
                             <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
+                            <option value="claude-sonnet-4-6-20260217">Sonnet 4.6</option>
                             <option value="claude-sonnet-4-5-20250929">Sonnet 4.5</option>
+                            <option value="claude-opus-4-6-20260205">Opus 4.6</option>
                             <option value="claude-opus-4-5-20251101">Opus 4.5</option>
                         </select>
                         <Button

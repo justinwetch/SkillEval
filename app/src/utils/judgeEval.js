@@ -22,7 +22,7 @@ export async function judgeSingleEval({
     evaluation,
     criteria,
     outputType,
-    judgeModel = 'claude-sonnet-4-5-20250929',
+    judgeModel = 'claude-sonnet-4-6-20260217',
     skillNames = { skillA: 'Skill A', skillB: 'Skill B' }
 }) {
     const startTime = Date.now();

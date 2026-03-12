@@ -8,7 +8,7 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
  * Call the Anthropic API
  * @param {Object} options
  * @param {string} options.apiKey - Anthropic API key
- * @param {string} options.model - Model to use (e.g., 'claude-sonnet-4-20250514')
+ * @param {string} options.model - Model to use (e.g., 'claude-sonnet-4-6-20260217')
  * @param {string} options.systemPrompt - System prompt
  * @param {Array} options.messages - Array of {role, content} messages
  * @param {number} options.maxTokens - Max tokens for response (default 8192)
@@ -17,7 +17,7 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
  */
 export async function callAnthropic({
     apiKey,
-    model = 'claude-sonnet-4-5-20250929',
+    model = 'claude-sonnet-4-6-20260217',
     systemPrompt,
     messages,
     maxTokens = 8192,

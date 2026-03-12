@@ -20,7 +20,7 @@ export async function runSingleEval({
     skillContent,
     baseSystemPrompt = '',
     prompt,
-    model = 'claude-sonnet-4-5-20250929',
+    model = 'claude-sonnet-4-6-20260217',
     maxTokens = 8192
 }) {
     const startTime = Date.now();
@@ -67,7 +67,7 @@ export async function runAllEvals({
     skillA,
     skillB,
     prompts,
-    model = 'claude-sonnet-4-5-20250929',
+    model = 'claude-sonnet-4-6-20260217',
     maxTokens = 8192,
     baseSystemPrompt = '',
     onProgress

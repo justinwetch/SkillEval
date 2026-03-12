@@ -6,8 +6,10 @@ import Button from '../components/Button'
 
 const MODELS = [
     { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', speed: 'Fast' },
-    { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', speed: 'Balanced' },
-    { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5', speed: 'Powerful' },
+    { value: 'claude-sonnet-4-6-20260217', label: 'Claude Sonnet 4.6', speed: 'Balanced' },
+    { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', speed: 'Balanced (Legacy)' },
+    { value: 'claude-opus-4-6-20260205', label: 'Claude Opus 4.6', speed: 'Powerful' },
+    { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5', speed: 'Powerful (Legacy)' },
 ]
 
 function SettingsView() {
