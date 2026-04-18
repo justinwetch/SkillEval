@@ -1,0 +1,36 @@
+{
+  "name": "@llm-hub/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "npm --workspace @llm-hub/core run build && tsup src/index.ts src/server.ts --format esm,cjs --dts",
+    "dev": "npm --workspace @llm-hub/core run build && tsx watch src/server.ts",
+    "test": "npm --workspace @llm-hub/core run build && vitest run",
+    "typecheck": "npm --workspace @llm-hub/core run build && tsc --project tsconfig.json --noEmit",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.11",
+    "@llm-hub/core": "0.1.0",
+    "ai": "^6.0.134",
+    "hono": "^4.12.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

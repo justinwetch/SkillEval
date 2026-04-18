@@ -1,0 +1,41 @@
+{
+  "name": "@llm-hub/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./styles.css"
+  },
+  "scripts": {
+    "build": "npm --workspace @llm-hub/server run build && tsup src/index.ts --format esm,cjs --dts",
+    "test": "npm --workspace @llm-hub/server run build && vitest run",
+    "typecheck": "npm --workspace @llm-hub/server run build && tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@llm-hub/core": "0.1.0",
+    "@llm-hub/server": "0.1.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^27.0.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

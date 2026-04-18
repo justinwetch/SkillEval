@@ -1,0 +1,25 @@
+{
+  "name": "llm-hub",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "bootstrap": "npm --workspace @llm-hub/ui run build",
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run bootstrap && concurrently -k -n server,demo -c blue,green \"npm run dev:server\" \"npm run dev:demo:wait\"",
+    "dev:server": "npm --workspace @llm-hub/server run dev",
+    "dev:demo": "npm --workspace @llm-hub/demo run dev",
+    "dev:demo:wait": "wait-on http://localhost:3001/health && npm run dev:demo",
+    "health:server": "node scripts/health-server.mjs",
+    "health:demo": "node scripts/health-demo.mjs",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "wait-on": "^9.0.4",
+    "typescript": "^5.9.3"
+  }
+}

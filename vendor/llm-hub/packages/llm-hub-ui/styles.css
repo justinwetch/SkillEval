@@ -1,0 +1,332 @@
+:root,
+.llm-hub-ui-theme {
+  --llm-hub-ui-surface: rgba(255, 255, 255, 0.92);
+  --llm-hub-ui-surface-strong: #ffffff;
+  --llm-hub-ui-surface-muted: #f4f7fb;
+  --llm-hub-ui-border: rgba(24, 33, 58, 0.1);
+  --llm-hub-ui-text: #122033;
+  --llm-hub-ui-text-soft: #5e6b81;
+  --llm-hub-ui-accent: #2457ff;
+  --llm-hub-ui-accent-soft: rgba(36, 87, 255, 0.12);
+  --llm-hub-ui-success: #138a5b;
+  --llm-hub-ui-warning: #b46b0d;
+  --llm-hub-ui-danger: #bd3e34;
+  --llm-hub-ui-shadow: 0 16px 40px rgba(15, 24, 42, 0.08);
+  --llm-hub-ui-radius-xl: 24px;
+  --llm-hub-ui-radius-lg: 18px;
+  --llm-hub-ui-radius-md: 14px;
+  --llm-hub-ui-radius-sm: 10px;
+  --llm-hub-ui-space-xs: 6px;
+  --llm-hub-ui-space-sm: 10px;
+  --llm-hub-ui-space-md: 14px;
+  --llm-hub-ui-space-lg: 18px;
+  --llm-hub-ui-space-xl: 22px;
+}
+
+.llm-hub-ui-provider-card,
+.llm-hub-ui-auth-method-card,
+.llm-hub-ui-warning,
+.llm-hub-ui-connection-summary,
+.llm-hub-ui-schema-renderer,
+.llm-hub-ui-schema-section {
+  border: 1px solid var(--llm-hub-ui-border);
+  border-radius: var(--llm-hub-ui-radius-lg);
+  background: var(--llm-hub-ui-surface-strong);
+  box-shadow: var(--llm-hub-ui-shadow);
+  color: var(--llm-hub-ui-text);
+}
+
+.llm-hub-ui-provider-card,
+.llm-hub-ui-auth-method-card,
+.llm-hub-ui-connection-summary,
+.llm-hub-ui-schema-section,
+.llm-hub-ui-warning,
+.llm-hub-ui-schema-renderer {
+  padding: var(--llm-hub-ui-space-lg);
+}
+
+.llm-hub-ui-provider-card,
+.llm-hub-ui-auth-method-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--llm-hub-ui-space-md);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.llm-hub-ui-provider-card:hover,
+.llm-hub-ui-auth-method-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(36, 87, 255, 0.28);
+}
+
+.llm-hub-ui-provider-card--selected,
+.llm-hub-ui-auth-method-card--selected {
+  border-color: rgba(36, 87, 255, 0.42);
+  box-shadow: 0 0 0 3px rgba(36, 87, 255, 0.08);
+}
+
+.llm-hub-ui-provider-card__header,
+.llm-hub-ui-auth-method-card__header,
+.llm-hub-ui-model-selector__header,
+.llm-hub-ui-connection-summary__header,
+.llm-hub-ui-schema-renderer__header,
+.llm-hub-ui-schema-section__header,
+.llm-hub-ui-field__header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--llm-hub-ui-space-md);
+  align-items: flex-start;
+}
+
+.llm-hub-ui-provider-card__header h3,
+.llm-hub-ui-schema-section__header h4,
+.llm-hub-ui-model-selector__header h4,
+.llm-hub-ui-connection-summary__header h4,
+.llm-hub-ui-schema-renderer__header h3 {
+  margin: 0;
+}
+
+.llm-hub-ui-muted,
+.llm-hub-ui-provider-card__meta,
+.llm-hub-ui-provider-card__footer,
+.llm-hub-ui-auth-method-card__warning,
+.llm-hub-ui-warning__content,
+.llm-hub-ui-field__description,
+.llm-hub-ui-field__helper,
+.llm-hub-ui-model-selector__description,
+.llm-hub-ui-schema-section__header p,
+.llm-hub-ui-connection-summary__header p {
+  color: var(--llm-hub-ui-text-soft);
+}
+
+.llm-hub-ui-eyebrow {
+  margin: 0 0 var(--llm-hub-ui-space-sm);
+  color: var(--llm-hub-ui-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.llm-hub-ui-chip-list,
+.llm-hub-ui-status-badges,
+.llm-hub-ui-action-bar,
+.llm-hub-ui-schema-renderer__sections,
+.llm-hub-ui-auth-method-selector,
+.llm-hub-ui-stack {
+  display: flex;
+  gap: var(--llm-hub-ui-space-md);
+  flex-wrap: wrap;
+}
+
+.llm-hub-ui-auth-method-selector,
+.llm-hub-ui-schema-renderer__sections,
+.llm-hub-ui-stack,
+.llm-hub-ui-model-selector,
+.llm-hub-ui-schema-renderer {
+  flex-direction: column;
+}
+
+.llm-hub-ui-chip,
+.llm-hub-ui-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--llm-hub-ui-space-xs);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--llm-hub-ui-border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.8rem;
+}
+
+.llm-hub-ui-chip--warning,
+.llm-hub-ui-status-badge--experimental {
+  background: rgba(255, 200, 92, 0.22);
+  color: var(--llm-hub-ui-warning);
+}
+
+.llm-hub-ui-chip--success,
+.llm-hub-ui-status-badge--connected {
+  background: rgba(25, 160, 110, 0.12);
+  color: var(--llm-hub-ui-success);
+}
+
+.llm-hub-ui-status-badge--default {
+  background: var(--llm-hub-ui-accent-soft);
+  color: var(--llm-hub-ui-accent);
+}
+
+.llm-hub-ui-status-badge--idle {
+  background: rgba(24, 33, 58, 0.06);
+}
+
+.llm-hub-ui-warning {
+  border-left: 4px solid var(--llm-hub-ui-warning);
+}
+
+.llm-hub-ui-warning--danger {
+  border-left-color: var(--llm-hub-ui-danger);
+}
+
+.llm-hub-ui-warning--success {
+  border-left-color: var(--llm-hub-ui-success);
+}
+
+.llm-hub-ui-warning__title {
+  margin: 0 0 var(--llm-hub-ui-space-xs);
+  font-weight: 700;
+}
+
+.llm-hub-ui-warning__content > *:first-child {
+  margin-top: 0;
+}
+
+.llm-hub-ui-warning__content > *:last-child {
+  margin-bottom: 0;
+}
+
+.llm-hub-ui-field-grid,
+.llm-hub-ui-model-selector__controls {
+  display: grid;
+  gap: var(--llm-hub-ui-space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.llm-hub-ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--llm-hub-ui-space-xs);
+  min-width: 220px;
+  flex: 1 1 240px;
+}
+
+.llm-hub-ui-field--dense {
+  min-width: 180px;
+}
+
+.llm-hub-ui-field__required,
+.llm-hub-ui-field__optional {
+  font-size: 0.78rem;
+  color: var(--llm-hub-ui-text-soft);
+}
+
+.llm-hub-ui-field__control,
+.llm-hub-ui-model-selector select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(24, 33, 58, 0.14);
+  border-radius: var(--llm-hub-ui-radius-md);
+  background: #fff;
+}
+
+.llm-hub-ui-field__warning {
+  color: var(--llm-hub-ui-warning);
+}
+
+.llm-hub-ui-field__error {
+  color: var(--llm-hub-ui-danger);
+}
+
+.llm-hub-ui-checkbox-field,
+.llm-hub-ui-radio-option,
+.llm-hub-ui-provider-card__footer,
+.llm-hub-ui-connection-summary__secrets li {
+  display: flex;
+  gap: var(--llm-hub-ui-space-sm);
+  justify-content: space-between;
+}
+
+.llm-hub-ui-radio-group {
+  display: grid;
+  gap: var(--llm-hub-ui-space-sm);
+}
+
+.llm-hub-ui-radio-option {
+  padding: 10px 12px;
+  border: 1px solid var(--llm-hub-ui-border);
+  border-radius: var(--llm-hub-ui-radius-md);
+  align-items: flex-start;
+}
+
+.llm-hub-ui-action-bar--sticky_footer {
+  position: sticky;
+  bottom: 0;
+  padding-top: var(--llm-hub-ui-space-md);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.88) 35%, rgba(255, 255, 255, 0.96));
+}
+
+.llm-hub-ui-action-button,
+.llm-hub-ui-link-button {
+  border: 0;
+  font: inherit;
+}
+
+.llm-hub-ui-action-button {
+  padding: 12px 16px;
+  border-radius: var(--llm-hub-ui-radius-md);
+  font-weight: 700;
+}
+
+.llm-hub-ui-action-button--primary {
+  background: var(--llm-hub-ui-accent);
+  color: white;
+}
+
+.llm-hub-ui-action-button--secondary {
+  background: rgba(24, 33, 58, 0.08);
+  color: var(--llm-hub-ui-text);
+}
+
+.llm-hub-ui-action-button--danger {
+  background: rgba(189, 62, 52, 0.12);
+  color: var(--llm-hub-ui-danger);
+}
+
+.llm-hub-ui-link-button {
+  padding: 0;
+  background: transparent;
+  color: var(--llm-hub-ui-accent);
+}
+
+.llm-hub-ui-action-button:disabled,
+.llm-hub-ui-link-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.llm-hub-ui-connection-summary__secrets {
+  padding: 0;
+  margin: var(--llm-hub-ui-space-md) 0;
+  list-style: none;
+}
+
+.llm-hub-ui-connection-summary__secrets code {
+  padding: 4px 8px;
+  border-radius: var(--llm-hub-ui-radius-sm);
+  background: var(--llm-hub-ui-surface-muted);
+}
+
+.llm-hub-ui-connection-summary__health.is-healthy {
+  color: var(--llm-hub-ui-success);
+}
+
+.llm-hub-ui-connection-summary__health.is-unhealthy {
+  color: var(--llm-hub-ui-danger);
+}
+
+.llm-hub-ui-schema-renderer--compact .llm-hub-ui-schema-section,
+.llm-hub-ui-schema-renderer--compact .llm-hub-ui-field__control,
+.llm-hub-ui-schema-renderer--sidebar .llm-hub-ui-schema-section {
+  padding: 14px;
+}
+
+.llm-hub-ui-schema-renderer--sidebar {
+  max-width: 440px;
+}
+
+@media (max-width: 720px) {
+  .llm-hub-ui-field-grid,
+  .llm-hub-ui-model-selector__controls {
+    grid-template-columns: 1fr;
+  }
+}

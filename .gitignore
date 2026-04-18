@@ -1,2 +1,8 @@
 .DS_Store
 .worktrees/
+vendor/llm-hub/node_modules/
+vendor/llm-hub/package-lock.json
+vendor/llm-hub/packages/*/node_modules/
+vendor/llm-hub/packages/*/dist/
+vendor/llm-hub/packages/*/.llm-hub/
+.worktrees/
