@@ -65,6 +65,21 @@ export const seedModels: ModelDefinition[] = [
   }),
   embeddingModel('openai', 'text-embedding-3-small', 'Text Embedding 3 Small'),
 
+  languageModel('codex-bridge', 'gpt-5', 'Codex Bridge - GPT-5', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['bridge', 'reasoning'],
+  }),
+  languageModel('codex-bridge', 'gpt-5-mini', 'Codex Bridge - GPT-5 Mini', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['bridge', 'fast'],
+  }),
+
   languageModel('anthropic', 'claude-haiku-3-5', 'Claude Haiku 3.5', {
     supportsStreaming: true,
     supportsTools: true,

@@ -53,6 +53,8 @@ export function buildSdkProvider(
   switch (providerId) {
     case 'openai':
       return createOpenAI({ apiKey: getRequiredSecret(credential, 'apiKey') }) as AiRegistryProvider;
+    case 'codex-bridge':
+      return createOpenAI({ apiKey: getRequiredSecret(credential, 'apiKey') }) as AiRegistryProvider;
     case 'anthropic':
       return createAnthropic({ apiKey: getRequiredSecret(credential, 'apiKey') }) as AiRegistryProvider;
     case 'gemini':

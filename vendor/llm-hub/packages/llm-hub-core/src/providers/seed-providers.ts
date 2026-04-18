@@ -141,6 +141,24 @@ const unofficialGoogleOauthMethod: ProviderAuthMethod = {
   supportsTesting: false,
 };
 
+const codexBridgeOAuthMethod: ProviderAuthMethod = {
+  id: 'oauth_pkce',
+  kind: 'oauth_pkce',
+  label: 'Codex OAuth bridge',
+  description:
+    'Connect through the local Codex OAuth bridge and store its OpenAI-compatible API key locally.',
+  badges: ['oauth', 'bridge'],
+  supportsTesting: true,
+  oauth: {
+    buttonLabel: 'Connect Codex',
+    authorizationUrl: process.env.LLM_HUB_CODEX_BRIDGE_AUTH_URL ?? '',
+    tokenExchangeUrl: process.env.LLM_HUB_CODEX_BRIDGE_TOKEN_URL ?? '',
+    launchMode: 'redirect',
+    codeChallengeMethod: 'S256',
+    callbackParamKeys: ['code', 'state'],
+  },
+};
+
 export const seedProviders: RegisteredProviderDefinition[] = [
   ...directProviders.map((providerBase) => {
     const apiKey = apiKeyMethod(providerBase.displayName);
@@ -194,6 +212,39 @@ export const seedProviders: RegisteredProviderDefinition[] = [
       methods,
     } satisfies RegisteredProviderDefinition;
   }),
+  {
+    provider: {
+      id: 'codex-bridge',
+      displayName: 'Codex Bridge',
+      description:
+        'Local OAuth PKCE bridge for Codex-backed OpenAI-compatible chat models.',
+      kind: 'oauth',
+      authMethods: [codexBridgeOAuthMethod],
+      defaultAuthMethodId: 'oauth_pkce',
+      capabilities: ['tools', 'vision', 'streaming', 'reasoning', 'oauth'],
+      badges: ['bridge'],
+      warnings: [],
+    },
+    methods: {
+      oauth_pkce: {
+        method: codexBridgeOAuthMethod,
+        inputSchema: payloadSchema(
+          z.object({
+            callbackUrl: z.string().url(),
+          }),
+        ),
+        sections: [
+          section(
+            'codex-bridge-oauth',
+            'OAuth connection',
+            [callbackUrlField],
+            'Launches the existing Codex bridge OAuth flow instead of collecting a manual API key.',
+          ),
+        ],
+        secretFieldKeys: ['apiKey'],
+      },
+    },
+  },
   {
     provider: {
       id: 'openrouter',
