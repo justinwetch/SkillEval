@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Evaluation Configuration Context
  * Manages state for skill files, criteria, prompts, and generation
@@ -6,6 +7,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { generateFromSkills, FALLBACK_CONFIG } from '../utils/generateConfig';
 import { useSettings } from './SettingsContext';
+import { useLlmHub } from './LlmHubContext';
 
 const EvalConfigContext = createContext(null);
 
@@ -23,6 +25,18 @@ const DEFAULT_CONFIG = {
 
 export function EvalConfigProvider({ children }) {
     const { settings } = useSettings();
+    const { adapter, defaultModel, models } = useLlmHub();
+    const firstConnectedLanguageModel = models.find(
+        (model) => model.connected && model.kind === 'language',
+    );
+    const fallbackModelSelection = defaultModel || (
+        firstConnectedLanguageModel
+            ? {
+                providerId: firstConnectedLanguageModel.providerId,
+                modelId: firstConnectedLanguageModel.modelId,
+            }
+            : null
+    );
 
     // Load initial state from localStorage
     const [config, setConfig] = useState(() => {
@@ -169,7 +183,8 @@ export function EvalConfigProvider({ children }) {
 
         try {
             const result = await generateFromSkills({
-                apiKey: settings.apiKey,
+                adapter,
+                modelSelection: settings.defaultConfigGenModel || fallbackModelSelection,
                 skillA: config.skillA,
                 skillB: config.skillB,
                 generationType: 'all',
@@ -200,7 +215,7 @@ export function EvalConfigProvider({ children }) {
         } finally {
             setIsGenerating(false);
         }
-    }, [config.skillA, config.skillB, config.promptCount, settings.apiKey, persistConfig]);
+    }, [adapter, config.skillA, config.skillB, config.promptCount, settings.defaultConfigGenModel, fallbackModelSelection, persistConfig]);
 
     // Regenerate just criteria
     const regenerateCriteria = useCallback(async () => {
@@ -214,7 +229,8 @@ export function EvalConfigProvider({ children }) {
 
         try {
             const result = await generateFromSkills({
-                apiKey: settings.apiKey,
+                adapter,
+                modelSelection: settings.defaultConfigGenModel || fallbackModelSelection,
                 skillA: config.skillA,
                 skillB: config.skillB,
                 generationType: 'criteria',
@@ -237,7 +253,7 @@ export function EvalConfigProvider({ children }) {
         } finally {
             setIsGenerating(false);
         }
-    }, [config, settings.apiKey, setCriteria]);
+    }, [adapter, config, settings.defaultConfigGenModel, fallbackModelSelection, setCriteria]);
 
     // Regenerate just prompts
     const regeneratePrompts = useCallback(async () => {
@@ -251,7 +267,8 @@ export function EvalConfigProvider({ children }) {
 
         try {
             const result = await generateFromSkills({
-                apiKey: settings.apiKey,
+                adapter,
+                modelSelection: settings.defaultConfigGenModel || fallbackModelSelection,
                 skillA: config.skillA,
                 skillB: config.skillB,
                 generationType: 'prompts',
@@ -275,7 +292,7 @@ export function EvalConfigProvider({ children }) {
         } finally {
             setIsGenerating(false);
         }
-    }, [config, settings.apiKey, setPrompts]);
+    }, [adapter, config, settings.defaultConfigGenModel, fallbackModelSelection, setPrompts]);
 
     // Clear all configuration
     const clearConfig = useCallback(() => {

@@ -1,10 +1,13 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { Settings, FlaskConical, Sliders, Sun, Moon } from 'lucide-react'
 import { useSettings } from '../contexts/SettingsContext'
-import ApiKeyWarning from './ApiKeyWarning'
+import { useLlmHub } from '../contexts/LlmHubContext'
+import ConnectionWarning from './ConnectionWarning'
 
 function Layout() {
-    const { settings, toggleTheme, needsApiKey } = useSettings()
+    const { settings, toggleTheme } = useSettings()
+    const { connectedProviders } = useLlmHub()
+    const needsConnection = connectedProviders.length === 0
 
     const navItems = [
         { path: '/configure', label: 'Configure', icon: Sliders },
@@ -29,22 +32,26 @@ function Layout() {
 
                     {/* Navigation - Centered */}
                     <nav className="flex items-center gap-1">
-                        {navItems.map(({ path, label, icon: Icon }) => (
-                            <NavLink
-                                key={path}
-                                to={path}
-                                className={({ isActive }) => `
-                                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                                    ${isActive
-                                        ? 'bg-[var(--color-accent)] text-[#FFFFFF]'
-                                        : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'
-                                    }
-                                `}
-                            >
-                                <Icon size={16} strokeWidth={2} />
-                                {label}
-                            </NavLink>
-                        ))}
+                        {navItems.map((item) => {
+                            const IconComponent = item.icon
+
+                            return (
+                                <NavLink
+                                    key={item.path}
+                                    to={item.path}
+                                    className={({ isActive }) => `
+                                        flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
+                                        ${isActive
+                                            ? 'bg-[var(--color-accent)] text-[#FFFFFF]'
+                                            : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'
+                                        }
+                                    `}
+                                >
+                                    <IconComponent size={16} strokeWidth={2} />
+                                    {item.label}
+                                </NavLink>
+                            )
+                        })}
                     </nav>
 
                     {/* Theme Toggle - Positioned Right */}
@@ -58,11 +65,11 @@ function Layout() {
                 </div>
             </header>
 
-            {/* API Key Warning Banner */}
-            {needsApiKey && <ApiKeyWarning />}
+            {/* Provider Connection Warning Banner */}
+            {needsConnection && <ConnectionWarning />}
 
             {/* Main Content */}
-            <main className={`pt-16 min-h-screen ${needsApiKey ? 'mt-12' : ''}`}>
+            <main className={`pt-16 min-h-screen ${needsConnection ? 'mt-12' : ''}`}>
                 <div className="max-w-5xl mx-auto px-8 py-12">
                     <Outlet />
                 </div>

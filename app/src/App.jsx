@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SettingsProvider } from './contexts/SettingsContext'
+import { LlmHubProvider } from './contexts/LlmHubContext'
 import { EvalConfigProvider } from './contexts/EvalConfigContext'
 import { EvalRunProvider } from './contexts/EvalRunContext'
 import Layout from './components/Layout'
@@ -11,21 +12,23 @@ import SettingsView from './views/SettingsView'
 function App() {
   return (
     <SettingsProvider>
-      <EvalConfigProvider>
-        <EvalRunProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<HomeView />} />
-                <Route path="configure" element={<ConfigureView />} />
-                <Route path="evaluate" element={<EvaluateView />} />
-                <Route path="settings" element={<SettingsView />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </EvalRunProvider>
-      </EvalConfigProvider>
+      <LlmHubProvider>
+        <EvalConfigProvider>
+          <EvalRunProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<HomeView />} />
+                  <Route path="configure" element={<ConfigureView />} />
+                  <Route path="evaluate" element={<EvaluateView />} />
+                  <Route path="settings" element={<SettingsView />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </EvalRunProvider>
+        </EvalConfigProvider>
+      </LlmHubProvider>
     </SettingsProvider>
   )
 }

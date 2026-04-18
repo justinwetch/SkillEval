@@ -13,6 +13,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@llm-hub/core": "file:../vendor/llm-hub/packages/llm-hub-core",
+    "@llm-hub/server": "file:../vendor/llm-hub/packages/llm-hub-server",
+    "@llm-hub/ui": "file:../vendor/llm-hub/packages/llm-hub-ui",
     "@tailwindcss/vite": "^4.1.18",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",

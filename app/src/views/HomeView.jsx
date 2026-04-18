@@ -2,10 +2,11 @@ import { Link } from 'react-router-dom'
 import { Sliders, FlaskConical, Settings, ArrowRight, Sparkles, FileText, BarChart3 } from 'lucide-react'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import { useSettings } from '../contexts/SettingsContext'
+import { useLlmHub } from '../contexts/LlmHubContext'
 
 function HomeView() {
-    const { needsApiKey } = useSettings()
+    const { connectedProviders } = useLlmHub()
+    const needsProviderConnection = connectedProviders.length === 0
 
     const features = [
         {
@@ -60,11 +61,11 @@ function HomeView() {
                     Compare two skill.md files side-by-side. Run the same prompts against both, let an AI judge score the outputs, and see which skill performs better.
                 </p>
                 <div className="flex justify-center gap-4">
-                    {needsApiKey ? (
+                    {needsProviderConnection ? (
                         <Link to="/settings">
                             <Button size="lg">
                                 <Settings size={18} strokeWidth={2} />
-                                Add API Key to Start
+                                Connect Provider to Start
                             </Button>
                         </Link>
                     ) : (
@@ -91,19 +92,23 @@ function HomeView() {
             {/* Features Grid */}
             <section className="pb-20">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {features.map(({ icon: Icon, title, description }) => (
-                        <Card key={title} padding="none" className="p-8 flex flex-col">
-                            <div className="w-14 h-14 rounded-2xl bg-[var(--color-accent-subtle)] flex items-center justify-center text-[var(--color-accent)] mb-6">
-                                <Icon size={26} strokeWidth={1.5} />
-                            </div>
-                            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">
-                                {title}
-                            </h3>
-                            <p className="text-[var(--color-text-secondary)] text-[15px] leading-relaxed">
-                                {description}
-                            </p>
-                        </Card>
-                    ))}
+                    {features.map((feature) => {
+                        const IconComponent = feature.icon
+
+                        return (
+                            <Card key={feature.title} padding="none" className="p-8 flex flex-col">
+                                <div className="w-14 h-14 rounded-2xl bg-[var(--color-accent-subtle)] flex items-center justify-center text-[var(--color-accent)] mb-6">
+                                    <IconComponent size={26} strokeWidth={1.5} />
+                                </div>
+                                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">
+                                    {feature.title}
+                                </h3>
+                                <p className="text-[var(--color-text-secondary)] text-[15px] leading-relaxed">
+                                    {feature.description}
+                                </p>
+                            </Card>
+                        )
+                    })}
                 </div>
             </section>
 

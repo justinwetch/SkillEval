@@ -3,7 +3,9 @@
  * Communicates with local Puppeteer screenshot server
  */
 
-const SCREENSHOT_SERVER = 'http://localhost:3001';
+import { getRuntimeConfig } from '../lib/runtimeConfig';
+
+const { screenshotServerUrl: SCREENSHOT_SERVER } = getRuntimeConfig();
 
 /**
  * Check if the screenshot server is running and healthy

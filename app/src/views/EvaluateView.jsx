@@ -21,12 +21,14 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
 import { useSettings } from '../contexts/SettingsContext'
+import { useLlmHub } from '../contexts/LlmHubContext'
 import { useEvalConfig } from '../contexts/EvalConfigContext'
 import { useEvalRun } from '../contexts/EvalRunContext'
 import { checkServerHealth } from '../utils/screenshot'
 
 function EvaluateView() {
-    const { needsApiKey } = useSettings()
+    const { settings, updateSetting } = useSettings()
+    const { connectedProviders, models } = useLlmHub()
     const { config, isReadyToEvaluate, updatePrompt } = useEvalConfig()
     const {
         evaluations,
@@ -46,8 +48,14 @@ function EvaluateView() {
     const [showAllPrompts, setShowAllPrompts] = useState(false)
     const [editingPromptIdx, setEditingPromptIdx] = useState(null)
     const [screenshotServerStatus, setScreenshotServerStatus] = useState(null)
-    const [generationModel, setGenerationModel] = useState('claude-sonnet-4-6-20260217')
-    const [judgeModel, setJudgeModel] = useState('claude-opus-4-6-20260205')
+    const connectedLanguageModels = models.filter(
+        (model) => model.connected && model.kind === 'language',
+    )
+    const [generationModel, setGenerationModel] = useState(settings.defaultEvalModel)
+    const [judgeModel, setJudgeModel] = useState(settings.defaultJudgeModel)
+    const needsProviderConnection = connectedProviders.length === 0
+    const selectionValue = (selection) => selection ? JSON.stringify(selection) : ''
+    const parseSelection = (value) => value ? JSON.parse(value) : null
 
     // Check screenshot server on mount and when output type changes
     useEffect(() => {
@@ -55,6 +63,14 @@ function EvaluateView() {
             checkServerHealth().then(setScreenshotServerStatus)
         }
     }, [config.outputType])
+
+    useEffect(() => {
+        setGenerationModel(settings.defaultEvalModel)
+    }, [settings.defaultEvalModel])
+
+    useEffect(() => {
+        setJudgeModel(settings.defaultJudgeModel)
+    }, [settings.defaultJudgeModel])
 
     // Format elapsed time
     const formatTime = (ms) => {
@@ -147,18 +163,18 @@ function EvaluateView() {
         }
     }
 
-    // API key required state
-    if (needsApiKey) {
+    // Provider connection required state
+    if (needsProviderConnection) {
         return (
             <div className="animate-fade-in max-w-md mx-auto text-center py-20">
                 <div className="w-14 h-14 rounded-xl bg-[var(--color-warning)]/15 flex items-center justify-center text-[var(--color-warning)] mx-auto mb-5">
                     <AlertCircle size={28} strokeWidth={1.5} />
                 </div>
                 <h1 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
-                    API Key Required
+                    Provider Connection Required
                 </h1>
                 <p className="text-[var(--color-text-secondary)] text-sm mb-8 leading-relaxed">
-                    You need to add an Anthropic API key before you can run evaluations.
+                    Connect Gemini or Codex in Settings before running evaluations.
                 </p>
                 <Link to="/settings">
                     <Button>Go to Settings</Button>
@@ -281,15 +297,23 @@ function EvaluateView() {
                     <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                         {/* Model Selector */}
                         <select
-                            value={generationModel}
-                            onChange={(e) => setGenerationModel(e.target.value)}
+                            value={selectionValue(generationModel)}
+                            onChange={(e) => {
+                                const selection = parseSelection(e.target.value)
+                                setGenerationModel(selection)
+                                updateSetting('defaultEvalModel', selection)
+                            }}
                             className="text-sm px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[#F5E6D3] text-[#2D2018] font-medium"
                         >
-                            <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
-                            <option value="claude-sonnet-4-6-20260217">Sonnet 4.6</option>
-                            <option value="claude-sonnet-4-5-20250929">Sonnet 4.5</option>
-                            <option value="claude-opus-4-6-20260205">Opus 4.6</option>
-                            <option value="claude-opus-4-5-20251101">Opus 4.5</option>
+                            <option value="">Evaluation model</option>
+                            {connectedLanguageModels.map((model) => (
+                                <option
+                                    key={model.fullModelId}
+                                    value={selectionValue({ providerId: model.providerId, modelId: model.modelId })}
+                                >
+                                    {model.displayName || model.modelId}
+                                </option>
+                            ))}
                         </select>
                         {/* Run All Button */}
                         <Button
@@ -406,15 +430,23 @@ function EvaluateView() {
                     <div className="flex items-center gap-3">
                         {/* Judge Model Selector */}
                         <select
-                            value={judgeModel}
-                            onChange={(e) => setJudgeModel(e.target.value)}
+                            value={selectionValue(judgeModel)}
+                            onChange={(e) => {
+                                const selection = parseSelection(e.target.value)
+                                setJudgeModel(selection)
+                                updateSetting('defaultJudgeModel', selection)
+                            }}
                             className="text-sm px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[#F5E6D3] text-[#2D2018] font-medium"
                         >
-                            <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
-                            <option value="claude-sonnet-4-6-20260217">Sonnet 4.6</option>
-                            <option value="claude-sonnet-4-5-20250929">Sonnet 4.5</option>
-                            <option value="claude-opus-4-6-20260205">Opus 4.6</option>
-                            <option value="claude-opus-4-5-20251101">Opus 4.5</option>
+                            <option value="">Judge model</option>
+                            {connectedLanguageModels.map((model) => (
+                                <option
+                                    key={model.fullModelId}
+                                    value={selectionValue({ providerId: model.providerId, modelId: model.modelId })}
+                                >
+                                    {model.displayName || model.modelId}
+                                </option>
+                            ))}
                         </select>
                         <Button
                             onClick={() => runJudgments(judgeModel)}

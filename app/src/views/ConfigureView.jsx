@@ -18,23 +18,18 @@ import {
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
-import { useSettings } from '../contexts/SettingsContext'
 import { useEvalConfig } from '../contexts/EvalConfigContext'
 
 function ConfigureView() {
     const navigate = useNavigate()
-    const { settings, setApiKey, needsApiKey } = useSettings()
     const {
         config,
         isGenerating,
         generationError,
         setSkill,
         setOutputType,
-        setCriteria,
-        updateCriterion,
         removeCriterion,
         addCriterion,
-        setPrompts,
         updatePrompt,
         removePrompt,
         addPrompt,
@@ -46,7 +41,6 @@ function ConfigureView() {
         hasSkills
     } = useEvalConfig()
 
-    const [localApiKey, setLocalApiKey] = useState(settings.apiKey || '')
     const [expandedCriterion, setExpandedCriterion] = useState(null)
     const [editingPrompt, setEditingPrompt] = useState(null)
     const [newPromptText, setNewPromptText] = useState('')
@@ -54,11 +48,6 @@ function ConfigureView() {
 
     const fileInputARef = useRef(null)
     const fileInputBRef = useRef(null)
-
-    // Handle API key save
-    const handleSaveApiKey = () => {
-        setApiKey(localApiKey)
-    }
 
     // Handle file upload
     const handleFileUpload = useCallback(async (side, file) => {
@@ -87,7 +76,7 @@ function ConfigureView() {
     }
 
     // Determine step completion
-    const apiKeyComplete = !needsApiKey
+    const providerConnectionStepComplete = true
     const skillsComplete = hasSkills
     const configComplete = config.criteria.length > 0 && config.prompts.length > 0
 
@@ -106,68 +95,49 @@ function ConfigureView() {
                 </p>
             </div>
 
-            {/* Step 1: API Key */}
+            {/* Step 1: Upload Skills */}
             <Card padding="none" className="p-6 mb-4">
-                <div className="flex items-start gap-4">
-                    <div className={`
-                        w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0
-                        ${apiKeyComplete
-                            ? 'bg-[var(--color-success)] text-[#FFFFFF]'
-                            : 'bg-[var(--color-accent)] text-[#FFFFFF]'
-                        }
-                    `}>
-                        {apiKeyComplete ? <Check size={16} strokeWidth={2.5} /> : '1'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
-                                API Key
-                            </h2>
-                            {apiKeyComplete && <Badge variant="success">Configured</Badge>}
-                        </div>
-                        <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-                            Required to run evaluations — stored locally in your browser
-                        </p>
-
-                        {!apiKeyComplete ? (
-                            <div className="flex gap-3">
-                                <input
-                                    type="password"
-                                    value={localApiKey}
-                                    onChange={(e) => setLocalApiKey(e.target.value)}
-                                    placeholder="sk-ant-api03-..."
-                                    className="flex-1 font-mono text-sm"
-                                />
-                                <Button
-                                    onClick={handleSaveApiKey}
-                                    disabled={!localApiKey.trim()}
-                                    size="md"
-                                >
-                                    Save Key
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-3">
-                                <span className="text-sm text-[var(--color-text-muted)] font-mono">
-                                    ••••••••{settings.apiKey.slice(-8)}
-                                </span>
-                                <Link to="/settings" className="text-sm text-[var(--color-accent)] hover:underline">
-                                    Change in Settings
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </Card>
-
-            {/* Step 2: Upload Skills */}
-            <Card padding="none" className={`p-6 mb-4 ${!apiKeyComplete ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex items-start gap-4 mb-6">
                     <div className={`
                         w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0
                         ${skillsComplete
                             ? 'bg-[var(--color-success)] text-[#FFFFFF]'
-                            : apiKeyComplete
+                            : 'bg-[var(--color-accent)] text-[#FFFFFF]'
+                        }
+                    `}>
+                        {skillsComplete ? <Check size={16} strokeWidth={2.5} /> : '1'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-1">
+                            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
+                                Provider Connection
+                            </h2>
+                            {providerConnectionStepComplete && <Badge variant="success">Managed</Badge>}
+                        </div>
+                        <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                            Connect Gemini or Codex in Settings. Secrets stay in the local llm-hub sidecar.
+                        </p>
+
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-[var(--color-text-muted)]">
+                                Credentials managed by llm-hub
+                            </span>
+                            <Link to="/settings" className="text-sm text-[var(--color-accent)] hover:underline">
+                                Change in Settings
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+
+            {/* Step 2: Upload Skills */}
+            <Card padding="none" className={`p-6 mb-4 ${!providerConnectionStepComplete ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="flex items-start gap-4 mb-6">
+                    <div className={`
+                        w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0
+                        ${skillsComplete
+                            ? 'bg-[var(--color-success)] text-[#FFFFFF]'
+                            : providerConnectionStepComplete
                                 ? 'bg-[var(--color-accent)] text-[#FFFFFF]'
                                 : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'
                         }

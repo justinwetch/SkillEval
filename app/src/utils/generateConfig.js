@@ -3,10 +3,9 @@
  * Analyzes skill files and generates criteria, prompts, and output type
  */
 
-import { callAnthropic } from './api';
+import { chatWithModel } from './llmHubClient';
+import { extractJsonObject } from './jsonResponse';
 import { getSkillHash, getCachedConfig, setCachedConfig } from './cache';
-
-const GENERATION_MODEL = 'claude-sonnet-4-6-20260217';
 
 const SYSTEM_PROMPT = `You are a configuration generator for an AI skill evaluation tool.
 
@@ -219,7 +218,8 @@ function validateConfig(config) {
 /**
  * Generate evaluation configuration from skill files
  * @param {Object} options
- * @param {string} options.apiKey - Anthropic API key
+ * @param {Object} options.adapter - llm-hub UI adapter
+ * @param {Object} options.modelSelection - { providerId, modelId }
  * @param {Object} options.skillA - { filename, content }
  * @param {Object} options.skillB - { filename, content }
  * @param {string} options.generationType - 'all' | 'criteria' | 'prompts' | 'outputType'
@@ -229,7 +229,8 @@ function validateConfig(config) {
  * @returns {Promise<Object>} Generated configuration
  */
 export async function generateFromSkills({
-    apiKey,
+    adapter,
+    modelSelection,
     skillA,
     skillB,
     generationType = 'all',
@@ -290,21 +291,14 @@ Do not generate criteria or prompts, use empty arrays.`;
     }
 
     try {
-        const response = await callAnthropic({
-            apiKey,
-            model: GENERATION_MODEL,
-            systemPrompt: SYSTEM_PROMPT,
+        const text = await chatWithModel({
+            adapter,
+            selection: modelSelection,
+            system: SYSTEM_PROMPT,
             messages: [{ role: 'user', content: userMessage }],
-            maxTokens: 8192,
-            jsonMode: true
+            maxOutputTokens: 8192,
         });
-
-        if (response.parseError) {
-            console.error('JSON parse error:', response.parseError);
-            throw new Error('Failed to parse generated configuration');
-        }
-
-        const generated = response.parsed;
+        const generated = extractJsonObject(text);
 
         // Validate the generated config
         const { valid, errors } = validateConfig(generated);

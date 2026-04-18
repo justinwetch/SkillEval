@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Evaluation Run Context
  * Manages state for active evaluation runs (generation, judging, results)
@@ -8,6 +9,7 @@ import { runAllEvals } from '../utils/runEval';
 import { judgeAllEvals } from '../utils/judgeEval';
 import { useSettings } from './SettingsContext';
 import { useEvalConfig } from './EvalConfigContext';
+import { useLlmHub } from './LlmHubContext';
 
 const EvalRunContext = createContext(null);
 
@@ -16,6 +18,18 @@ const STORAGE_KEY = 'skill_eval_run_state';
 export function EvalRunProvider({ children }) {
     const { settings } = useSettings();
     const { config } = useEvalConfig();
+    const { adapter, connectedProviders, defaultModel, models } = useLlmHub();
+    const firstConnectedLanguageModel = models.find(
+        (model) => model.connected && model.kind === 'language',
+    );
+    const fallbackModelSelection = defaultModel || (
+        firstConnectedLanguageModel
+            ? {
+                providerId: firstConnectedLanguageModel.providerId,
+                modelId: firstConnectedLanguageModel.modelId,
+            }
+            : null
+    );
 
     // Evaluation run state
     const [evaluations, setEvaluations] = useState(() => {
@@ -61,10 +75,11 @@ export function EvalRunProvider({ children }) {
 
     // Run all generations
     const runGenerations = useCallback(async (model) => {
-        if (!settings.apiKey) {
-            setRunError('API key is required');
+        if (connectedProviders.length === 0) {
+            setRunError('Provider connection is required');
             return false;
         }
+        const modelSelection = model || settings.defaultEvalModel || fallbackModelSelection;
 
         setRunStatus('generating');
         setRunError(null);
@@ -72,15 +87,15 @@ export function EvalRunProvider({ children }) {
         setEndTime(null);
 
         // Initialize fresh evaluations
-        const freshEvals = initializeEvaluations();
+        initializeEvaluations();
 
         try {
             const results = await runAllEvals({
-                apiKey: settings.apiKey,
+                adapter,
+                modelSelection,
                 skillA: config.skillA,
                 skillB: config.skillB,
                 prompts: config.prompts,
-                model: model || settings.defaultGenModel || 'claude-sonnet-4-6-20260217',
                 maxTokens: 8192,
                 onProgress: (p) => setProgress(p)
             });
@@ -96,26 +111,25 @@ export function EvalRunProvider({ children }) {
             setEndTime(Date.now());
             return false;
         }
-    }, [settings, config, initializeEvaluations, persistEvaluations]);
+    }, [adapter, settings, config, connectedProviders.length, fallbackModelSelection, initializeEvaluations, persistEvaluations]);
 
     // Run all judgments
     const runJudgments = useCallback(async (judgeModel) => {
-        if (!settings.apiKey) {
-            setRunError('API key is required');
+        if (connectedProviders.length === 0) {
+            setRunError('Provider connection is required');
             return false;
         }
+        const judgeSelection = judgeModel || settings.defaultJudgeModel || fallbackModelSelection;
 
         setRunStatus('judging');
         setRunError(null);
-        const judgeStartTime = Date.now();
-
         try {
             const results = await judgeAllEvals({
-                apiKey: settings.apiKey,
+                adapter,
+                modelSelection: judgeSelection,
                 evaluations: [...evaluations],
                 criteria: config.criteria,
                 outputType: config.outputType,
-                judgeModel: judgeModel || settings.defaultJudgeModel || 'claude-sonnet-4-6-20260217',
                 skillNames: {
                     skillA: config.skillA.filename || 'Skill A',
                     skillB: config.skillB.filename || 'Skill B'
@@ -133,7 +147,7 @@ export function EvalRunProvider({ children }) {
             setRunStatus('idle');
             return false;
         }
-    }, [settings, config, evaluations, persistEvaluations]);
+    }, [adapter, settings, config, connectedProviders.length, fallbackModelSelection, evaluations, persistEvaluations]);
 
     // Clear all run state
     const clearRunState = useCallback(() => {
