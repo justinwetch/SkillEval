@@ -29,6 +29,12 @@ describe('provider lookup', () => {
     const githubModels = service
       .listModels('github-models')
       .map((model) => model.modelId);
+    const deepInfraMethods = service
+      .getAuthMethods('deepinfra')
+      .map((method) => method.id);
+    const deepInfraModels = service
+      .listModels('deepinfra')
+      .map((model) => model.modelId);
 
     expect(providerIds).toEqual(
       expect.arrayContaining([
@@ -37,6 +43,7 @@ describe('provider lookup', () => {
         'anthropic',
         'gemini',
         'github-models',
+        'deepinfra',
         'openrouter',
         'ollama',
         'custom-openai-compatible',
@@ -73,6 +80,14 @@ describe('provider lookup', () => {
         'openai/gpt-5.2-codex',
         'openai/gpt-5.4',
         'anthropic/claude-sonnet-4.5',
+      ]),
+    );
+    expect(deepInfraMethods).toEqual(expect.arrayContaining(['api_key']));
+    expect(deepInfraModels).toEqual(
+      expect.arrayContaining([
+        'zai-org/GLM-5.1',
+        'Qwen/Qwen3.5-397B-A17B',
+        'deepseek-ai/DeepSeek-V3',
       ]),
     );
   });

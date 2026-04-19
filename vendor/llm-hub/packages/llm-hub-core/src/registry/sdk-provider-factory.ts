@@ -78,6 +78,13 @@ export function buildSdkProvider(
         },
         supportsStructuredOutputs: true,
       }) as AiRegistryProvider;
+    case 'deepinfra':
+      return createOpenAICompatible({
+        name: 'deepinfra',
+        apiKey: getRequiredSecret(credential, 'apiKey'),
+        baseURL: 'https://api.deepinfra.com/v1/openai',
+        supportsStructuredOutputs: true,
+      }) as AiRegistryProvider;
     case 'ollama':
       return createOllama({
         baseURL: getStringValue(credential, 'baseURL') ?? 'http://localhost:11434/api',

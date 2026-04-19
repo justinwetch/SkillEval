@@ -136,6 +136,16 @@ const directProviders = [
     badges: ['github'],
     warnings: [],
   },
+  {
+    id: 'deepinfra',
+    displayName: 'DeepInfra',
+    description: 'DeepInfra OpenAI-compatible inference using a DeepInfra API key.',
+    website: 'https://deepinfra.com',
+    kind: 'direct_api_key' as const,
+    capabilities: ['tools', 'streaming', 'reasoning'] as const,
+    badges: ['openai-compatible'],
+    warnings: [],
+  },
 ] satisfies Array<Omit<ProviderDefinition, 'authMethods' | 'defaultAuthMethodId'>>;
 
 const codexBridgeOAuthMethod: ProviderAuthMethod = {

@@ -72,4 +72,19 @@ describe('sdk provider factory', () => {
       supportsStructuredOutputs: true,
     });
   });
+
+  it('builds DeepInfra providers with the OpenAI-compatible endpoint', () => {
+    const provider = buildSdkProvider(
+      'deepinfra',
+      credentialRecord('deepinfra-token', 'deepinfra', 'api_key'),
+    );
+
+    expect(provider).toBeDefined();
+    expect(createOpenAICompatibleMock).toHaveBeenCalledWith({
+      name: 'deepinfra',
+      apiKey: 'deepinfra-token',
+      baseURL: 'https://api.deepinfra.com/v1/openai',
+      supportsStructuredOutputs: true,
+    });
+  });
 });

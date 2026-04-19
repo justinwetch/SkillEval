@@ -232,6 +232,35 @@ export const seedModels: ModelDefinition[] = [
     },
   ),
 
+  languageModel('deepinfra', 'zai-org/GLM-5.1', 'DeepInfra - GLM-5.1', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    tags: ['coding', 'reasoning'],
+  }),
+  languageModel('deepinfra', 'Qwen/Qwen3.5-397B-A17B', 'DeepInfra - Qwen3.5 397B', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    tags: ['reasoning'],
+  }),
+  languageModel('deepinfra', 'deepseek-ai/DeepSeek-V3', 'DeepInfra - DeepSeek V3', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    tags: ['coding', 'reasoning'],
+  }),
+  languageModel('deepinfra', 'meta-llama/Llama-3.3-70B-Instruct', 'DeepInfra - Llama 3.3 70B', {
+    supportsStreaming: true,
+    supportsTools: true,
+    tags: ['balanced'],
+  }),
+  languageModel('deepinfra', 'Qwen/Qwen2.5-Coder-32B-Instruct', 'DeepInfra - Qwen2.5 Coder 32B', {
+    supportsStreaming: true,
+    supportsTools: true,
+    tags: ['coding', 'fast'],
+  }),
+
   languageModel('openrouter', 'openai/gpt-5-mini', 'OpenRouter - GPT-5 Mini', {
     supportsStreaming: true,
     supportsTools: true,

@@ -397,6 +397,10 @@ export class LlmHubCoreService {
             'X-GitHub-Api-Version': '2026-03-10',
           },
         });
+      case 'deepinfra':
+        return fetch('https://api.deepinfra.com/v1/openai/models', {
+          headers: { Authorization: `Bearer ${credential.secrets.apiKey}` },
+        });
       case 'ollama': {
         const baseUrl = String(credential.values.baseURL ?? 'http://localhost:11434/api');
         return fetch(`${baseUrl.replace(/\/$/, '')}/tags`, {
