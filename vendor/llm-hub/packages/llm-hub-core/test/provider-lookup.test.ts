@@ -86,6 +86,8 @@ describe('provider lookup', () => {
     expect(deepInfraModels).toEqual(
       expect.arrayContaining([
         'zai-org/GLM-5.1',
+        'anthropic/claude-4-sonnet',
+        'anthropic/claude-4-opus',
         'Qwen/Qwen3.5-397B-A17B',
         'deepseek-ai/DeepSeek-V3',
       ]),

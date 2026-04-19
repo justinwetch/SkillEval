@@ -238,6 +238,32 @@ export const seedModels: ModelDefinition[] = [
     supportsReasoning: true,
     tags: ['coding', 'reasoning'],
   }),
+  languageModel('deepinfra', 'anthropic/claude-4-sonnet', 'DeepInfra - Claude 4 Sonnet', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['balanced', 'judge'],
+  }),
+  languageModel('deepinfra', 'anthropic/claude-4-opus', 'DeepInfra - Claude 4 Opus', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['reasoning', 'judge'],
+  }),
+  languageModel(
+    'deepinfra',
+    'anthropic/claude-3-7-sonnet-latest',
+    'DeepInfra - Claude 3.7 Sonnet',
+    {
+      supportsStreaming: true,
+      supportsTools: true,
+      supportsVision: true,
+      supportsReasoning: true,
+      tags: ['balanced', 'judge'],
+    },
+  ),
   languageModel('deepinfra', 'Qwen/Qwen3.5-397B-A17B', 'DeepInfra - Qwen3.5 397B', {
     supportsStreaming: true,
     supportsTools: true,
