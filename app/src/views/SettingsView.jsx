@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Cpu, RefreshCw, Trash2, WifiOff } from 'lucide-react'
 import '@llm-hub/ui/styles.css'
-import { ConnectionSchemaRenderer } from '@llm-hub/ui'
+import { ConnectionSchemaRenderer, ProviderStatusBadge, WarningCallout } from '@llm-hub/ui'
 import { useSettings } from '../contexts/SettingsContext'
 import { useLlmHub } from '../contexts/LlmHubContext'
 import Card from '../components/Card'
@@ -17,9 +17,17 @@ function SettingsView() {
     const [selectedProviderId, setSelectedProviderId] = useState('')
     const [authMethods, setAuthMethods] = useState([])
     const [selectedAuthMethodId, setSelectedAuthMethodId] = useState('')
+    const [connectionFeedback, setConnectionFeedback] = useState(null)
     const effectiveSelectedProviderId = selectedProviderId || providers[0]?.id || ''
     const selectedProvider = providers.find((provider) => provider.id === effectiveSelectedProviderId)
     const selectedAuthMethod = authMethods.find((method) => method.id === selectedAuthMethodId)
+    const connectedProvider = connectedProviders.find(
+        (provider) => provider.id === effectiveSelectedProviderId,
+    )
+    const selectedProviderConnected = Boolean(connectedProvider || selectedProvider?.connected)
+    const selectedProviderModels = models.filter(
+        (model) => model.connected && model.providerId === effectiveSelectedProviderId && model.kind === 'language',
+    )
     const connectedLanguageModels = models.filter(
         (model) => model.connected && model.kind === 'language',
     )
@@ -148,7 +156,10 @@ function SettingsView() {
                                 </span>
                                 <select
                                     value={effectiveSelectedProviderId}
-                                    onChange={(event) => setSelectedProviderId(event.target.value)}
+                                    onChange={(event) => {
+                                        setConnectionFeedback(null)
+                                        setSelectedProviderId(event.target.value)
+                                    }}
                                     className="w-full"
                                 >
                                     {providers.map((provider) => (
@@ -165,7 +176,10 @@ function SettingsView() {
                                 </span>
                                 <select
                                     value={selectedAuthMethodId}
-                                    onChange={(event) => setSelectedAuthMethodId(event.target.value)}
+                                    onChange={(event) => {
+                                        setConnectionFeedback(null)
+                                        setSelectedAuthMethodId(event.target.value)
+                                    }}
                                     className="w-full"
                                     disabled={authMethods.length === 0}
                                 >
@@ -178,6 +192,37 @@ function SettingsView() {
                             </label>
                         </div>
 
+                        {selectedProvider ? (
+                            <div className="space-y-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-tertiary)]/55 px-4 py-3">
+                                    <div>
+                                        <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                                            {selectedProvider.name}
+                                        </p>
+                                        <p className="text-xs text-[var(--color-text-muted)]">
+                                            {selectedProviderConnected
+                                                ? `${selectedProviderModels.length} connected model${selectedProviderModels.length === 1 ? '' : 's'} available.`
+                                                : 'Not connected yet. Save the API key, then use Test connection to verify it.'}
+                                        </p>
+                                    </div>
+                                    <ProviderStatusBadge
+                                        connected={selectedProviderConnected}
+                                        experimental={selectedProvider.experimental}
+                                    />
+                                </div>
+
+                                {connectionFeedback ? (
+                                    <WarningCallout
+                                        title={connectionFeedback.tone === 'success' ? 'Connection updated' : 'Connection issue'}
+                                        tone={connectionFeedback.tone === 'success' ? 'success' : 'danger'}
+                                        className="skill-eval-llm-hub-feedback"
+                                    >
+                                        {connectionFeedback.text}
+                                    </WarningCallout>
+                                ) : null}
+                            </div>
+                        ) : null}
+
                         {selectedProvider && selectedAuthMethod ? (
                             <ConnectionSchemaRenderer
                                 adapter={adapter}
@@ -185,6 +230,8 @@ function SettingsView() {
                                 authMethod={selectedAuthMethod}
                                 hostMode="full_settings_page"
                                 className="skill-eval-llm-hub"
+                                feedbackMode="external"
+                                onFeedback={setConnectionFeedback}
                                 onMutation={async () => refresh()}
                                 density="comfortable"
                             />

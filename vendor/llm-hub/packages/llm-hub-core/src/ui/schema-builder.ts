@@ -135,6 +135,14 @@ export function buildProviderUISchema(options: {
       kind: 'connect',
       label: 'Connect',
       variant: 'primary',
+      visibility: [
+        {
+          source: 'connection_status',
+          key: 'status',
+          operator: 'not_equals',
+          value: 'connected',
+        },
+      ],
     },
     {
       id: 'disconnect',

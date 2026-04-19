@@ -323,12 +323,16 @@ export function ConnectionSchemaRenderer({
       <div className="llm-hub-ui-schema-renderer__sections">
         {visibleSections.map((section) => (
           <div key={section.id} className="llm-hub-ui-schema-section">
-            <div className="llm-hub-ui-schema-section__header">
-              <div>
-                <h4>{section.title}</h4>
-                {section.description ? <p>{section.description}</p> : null}
+            {!(section.fields.length === 1 &&
+              section.title === section.fields[0]?.label &&
+              !section.description) ? (
+              <div className="llm-hub-ui-schema-section__header">
+                <div>
+                  <h4>{section.title}</h4>
+                  {section.description ? <p>{section.description}</p> : null}
+                </div>
               </div>
-            </div>
+            ) : null}
 
             {section.warnings.map((warning) => (
               <WarningCallout key={warning} title="Heads up" tone="warning">
