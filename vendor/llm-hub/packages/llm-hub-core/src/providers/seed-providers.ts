@@ -136,6 +136,8 @@ const codexBridgeOAuthMethod: ProviderAuthMethod = {
     'Connect through the local Codex OAuth bridge and store its OpenAI-compatible API key locally.',
   badges: ['oauth', 'bridge'],
   supportsTesting: true,
+  warning:
+    'Set LLM_HUB_CODEX_BRIDGE_AUTH_URL and LLM_HUB_CODEX_BRIDGE_TOKEN_URL in app/.env.local to enable Codex OAuth.',
   oauth: {
     buttonLabel: 'Connect Codex',
     authorizationUrl: process.env.LLM_HUB_CODEX_BRIDGE_AUTH_URL ?? '',
