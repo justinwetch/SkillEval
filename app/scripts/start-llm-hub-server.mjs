@@ -15,8 +15,8 @@ if (
   !process.env.LLM_HUB_CODEX_BRIDGE_AUTH_URL ||
   !process.env.LLM_HUB_CODEX_BRIDGE_TOKEN_URL
 ) {
-  throw new Error(
-    'Set LLM_HUB_CODEX_BRIDGE_AUTH_URL and LLM_HUB_CODEX_BRIDGE_TOKEN_URL before starting the SkillEval llm-hub sidecar.',
+  console.warn(
+    'Codex bridge OAuth URLs are not set. Gemini API-key auth will still work; Codex OAuth will appear unavailable until LLM_HUB_CODEX_BRIDGE_AUTH_URL and LLM_HUB_CODEX_BRIDGE_TOKEN_URL are set.',
   );
 }
 
