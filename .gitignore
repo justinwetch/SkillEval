@@ -1,8 +1,10 @@
 .DS_Store
+node_modules/
+.demo-logs/
+.llm-hub-skilleval/
 .worktrees/
 vendor/llm-hub/node_modules/
 vendor/llm-hub/package-lock.json
 vendor/llm-hub/packages/*/node_modules/
 vendor/llm-hub/packages/*/dist/
 vendor/llm-hub/packages/*/.llm-hub/
-.worktrees/

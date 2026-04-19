@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "llm-hub": "node ./scripts/start-llm-hub-server.mjs",
+    "screenshot-server": "node ./scripts/screenshot-server.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -17,7 +18,10 @@
     "@llm-hub/server": "file:../vendor/llm-hub/packages/llm-hub-server",
     "@llm-hub/ui": "file:../vendor/llm-hub/packages/llm-hub-ui",
     "@tailwindcss/vite": "^4.1.18",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
     "lucide-react": "^0.562.0",
+    "puppeteer": "^24.41.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0",
