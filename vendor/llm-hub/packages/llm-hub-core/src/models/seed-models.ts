@@ -186,6 +186,52 @@ export const seedModels: ModelDefinition[] = [
   }),
   embeddingModel('gemini', 'text-embedding-004', 'Text Embedding 004'),
 
+  languageModel('github-models', 'openai/gpt-5.4', 'GitHub Models - GPT-5.4', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['github', 'reasoning'],
+  }),
+  languageModel('github-models', 'openai/gpt-5.2-codex', 'GitHub Models - GPT-5.2-Codex', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['github', 'coding', 'reasoning'],
+  }),
+  languageModel('github-models', 'openai/gpt-5.3-codex', 'GitHub Models - GPT-5.3-Codex', {
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['github', 'coding', 'reasoning'],
+  }),
+  languageModel(
+    'github-models',
+    'anthropic/claude-sonnet-4.5',
+    'GitHub Models - Claude Sonnet 4.5',
+    {
+      supportsStreaming: true,
+      supportsTools: true,
+      supportsVision: true,
+      supportsReasoning: true,
+      tags: ['github', 'balanced'],
+    },
+  ),
+  languageModel(
+    'github-models',
+    'anthropic/claude-opus-4.5',
+    'GitHub Models - Claude Opus 4.5',
+    {
+      supportsStreaming: true,
+      supportsTools: true,
+      supportsVision: true,
+      supportsReasoning: true,
+      tags: ['github', 'reasoning'],
+    },
+  ),
+
   languageModel('openrouter', 'openai/gpt-5-mini', 'OpenRouter - GPT-5 Mini', {
     supportsStreaming: true,
     supportsTools: true,

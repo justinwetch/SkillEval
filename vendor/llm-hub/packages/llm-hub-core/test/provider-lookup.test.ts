@@ -23,6 +23,12 @@ describe('provider lookup', () => {
     const geminiModels = service
       .listModels('gemini')
       .map((model) => model.modelId);
+    const githubModelsMethods = service
+      .getAuthMethods('github-models')
+      .map((method) => method.id);
+    const githubModels = service
+      .listModels('github-models')
+      .map((model) => model.modelId);
 
     expect(providerIds).toEqual(
       expect.arrayContaining([
@@ -30,6 +36,7 @@ describe('provider lookup', () => {
         'codex-bridge',
         'anthropic',
         'gemini',
+        'github-models',
         'openrouter',
         'ollama',
         'custom-openai-compatible',
@@ -58,6 +65,14 @@ describe('provider lookup', () => {
         'gemini-3-pro-preview',
         'gemini-3.1-pro-preview',
         'gemini-3.1-flash-lite-preview',
+      ]),
+    );
+    expect(githubModelsMethods).toEqual(expect.arrayContaining(['github_token']));
+    expect(githubModels).toEqual(
+      expect.arrayContaining([
+        'openai/gpt-5.2-codex',
+        'openai/gpt-5.4',
+        'anthropic/claude-sonnet-4.5',
       ]),
     );
   });

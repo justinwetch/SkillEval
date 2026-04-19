@@ -389,6 +389,14 @@ export class LlmHubCoreService {
         return fetch('https://openrouter.ai/api/v1/models', {
           headers: { Authorization: `Bearer ${credential.secrets.apiKey}` },
         });
+      case 'github-models':
+        return fetch('https://models.github.ai/catalog/models', {
+          headers: {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${credential.secrets.apiKey}`,
+            'X-GitHub-Api-Version': '2026-03-10',
+          },
+        });
       case 'ollama': {
         const baseUrl = String(credential.values.baseURL ?? 'http://localhost:11434/api');
         return fetch(`${baseUrl.replace(/\/$/, '')}/tags`, {

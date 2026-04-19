@@ -67,6 +67,17 @@ export function buildSdkProvider(
         headers: getHeaders(credential),
         supportsStructuredOutputs: true,
       }) as AiRegistryProvider;
+    case 'github-models':
+      return createOpenAICompatible({
+        name: 'githubModels',
+        apiKey: getRequiredSecret(credential, 'apiKey'),
+        baseURL: 'https://models.github.ai/inference',
+        headers: {
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2026-03-10',
+        },
+        supportsStructuredOutputs: true,
+      }) as AiRegistryProvider;
     case 'ollama':
       return createOllama({
         baseURL: getStringValue(credential, 'baseURL') ?? 'http://localhost:11434/api',

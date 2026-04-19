@@ -126,6 +126,16 @@ const directProviders = [
     badges: ['official'],
     warnings: [],
   },
+  {
+    id: 'github-models',
+    displayName: 'GitHub Models',
+    description: 'GitHub Models personal inference using a GitHub token.',
+    website: 'https://models.github.ai',
+    kind: 'direct_api_key' as const,
+    capabilities: ['tools', 'vision', 'streaming', 'reasoning'] as const,
+    badges: ['github'],
+    warnings: [],
+  },
 ] satisfies Array<Omit<ProviderDefinition, 'authMethods' | 'defaultAuthMethodId'>>;
 
 const codexBridgeOAuthMethod: ProviderAuthMethod = {
@@ -150,7 +160,16 @@ const codexBridgeOAuthMethod: ProviderAuthMethod = {
 
 export const seedProviders: RegisteredProviderDefinition[] = [
   ...directProviders.map((providerBase) => {
-    const apiKey = apiKeyMethod(providerBase.displayName);
+    const apiKey = apiKeyMethod(
+      providerBase.displayName,
+      providerBase.id === 'github-models'
+        ? {
+            id: 'github_token',
+            label: 'GitHub token',
+            description: 'Connect GitHub Models with a token that can read models.',
+          }
+        : undefined,
+    );
     const authMethods = [apiKey.method];
     const methods = {
       [apiKey.method.id]: {
