@@ -20,6 +20,9 @@ describe('provider lookup', () => {
     const codexBridgeModels = service
       .listModels('codex-bridge')
       .map((model) => model.modelId);
+    const geminiModels = service
+      .listModels('gemini')
+      .map((model) => model.modelId);
 
     expect(providerIds).toEqual(
       expect.arrayContaining([
@@ -37,7 +40,25 @@ describe('provider lookup', () => {
     );
     expect(codexBridgeMethods).toEqual(expect.arrayContaining(['oauth_pkce']));
     expect(codexBridgeModels).toEqual(
-      expect.arrayContaining(['gpt-5', 'gpt-5-mini']),
+      expect.arrayContaining([
+        'gpt-5',
+        'gpt-5-mini',
+        'gpt-5-codex',
+        'gpt-5.1-codex',
+        'gpt-5.1-codex-mini',
+        'gpt-5.1-codex-max',
+        'gpt-5.2-codex',
+      ]),
+    );
+    expect(geminiModels).toEqual(
+      expect.arrayContaining([
+        'gemini-2.5-flash',
+        'gemini-2.5-pro',
+        'gemini-3-flash-preview',
+        'gemini-3-pro-preview',
+        'gemini-3.1-pro-preview',
+        'gemini-3.1-flash-lite-preview',
+      ]),
     );
   });
 
