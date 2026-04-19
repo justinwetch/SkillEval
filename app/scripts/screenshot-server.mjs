@@ -1,12 +1,20 @@
 import cors from 'cors';
 import express from 'express';
 import puppeteer from 'puppeteer';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRunHistoryStore } from './run-history-store.mjs';
 
 const app = express();
 const PORT = Number(process.env.SCREENSHOT_SERVER_PORT || 3001);
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const appDir = resolve(scriptDir, '..');
+const repoRoot = resolve(appDir, '..');
+const runHistoryDbPath = process.env.SKILLEVAL_RUN_HISTORY_DB || resolve(repoRoot, 'data', 'skilleval.sqlite');
+const runHistory = createRunHistoryStore(runHistoryDbPath);
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
 
 let browser = null;
 
@@ -60,7 +68,65 @@ app.post('/screenshot', async (req, res) => {
 });
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', browser: browser ? 'running' : 'not started' });
+    res.json({ status: 'ok', browser: browser ? 'running' : 'not started' });
+});
+
+app.get('/runs', (_req, res) => {
+  try {
+    res.json({ runs: runHistory.list() });
+  } catch (error) {
+    console.error('Run history list error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/runs', (req, res) => {
+  try {
+    const run = runHistory.create(req.body?.payload || {}, req.body?.name);
+    res.status(201).json({ run });
+  } catch (error) {
+    console.error('Run history create error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/runs/:id', (req, res) => {
+  try {
+    const run = runHistory.get(req.params.id);
+    if (!run) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    res.json({ run });
+  } catch (error) {
+    console.error('Run history load error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch('/runs/:id', (req, res) => {
+  try {
+    const run = runHistory.update(req.params.id, req.body?.payload || {}, req.body?.name);
+    if (!run) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    res.json({ run });
+  } catch (error) {
+    console.error('Run history update error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/runs/:id', (req, res) => {
+  try {
+    const deleted = runHistory.delete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    console.error('Run history delete error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 process.on('SIGINT', async () => {
@@ -69,6 +135,7 @@ process.on('SIGINT', async () => {
   if (browser) {
     await browser.close();
   }
+  runHistory.close();
 
   process.exit(0);
 });
@@ -78,4 +145,6 @@ app.listen(PORT, () => {
   console.log('Endpoints:');
   console.log('  POST /screenshot - Capture screenshot of HTML');
   console.log('  GET  /health     - Health check');
+  console.log('  GET  /runs       - List saved evaluation runs');
+  console.log(`Run history DB: ${runHistoryDbPath}`);
 });

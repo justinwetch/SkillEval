@@ -32,6 +32,7 @@ import type {
   ProviderSummaryContract,
 } from '../contracts';
 import { LlmHubServerError } from '../errors';
+import { runCodexCli, type CodexCliRunInput, type CodexCliRunResult } from './codex-cli-runner';
 import { getLayoutHints } from './layout-hints';
 import {
   FileJsonServerStateStore,
@@ -51,6 +52,7 @@ export interface LlmHubServerServiceOptions {
   coreService?: LlmHubCoreService;
   providerRegistry?: LlmHubProviderRegistry;
   generateTextImpl?: typeof generateText;
+  codexCliRunner?: (input: CodexCliRunInput) => Promise<CodexCliRunResult>;
   embedImpl?: typeof embed;
   embedManyImpl?: typeof embedMany;
 }
@@ -62,6 +64,7 @@ export class LlmHubServerService {
   private readonly providerRegistry: LlmHubProviderRegistry;
   private readonly publicBaseUrl?: string;
   private readonly generateTextImpl: typeof generateText;
+  private readonly codexCliRunner: (input: CodexCliRunInput) => Promise<CodexCliRunResult>;
   private readonly embedImpl: typeof embed;
   private readonly embedManyImpl: typeof embedMany;
 
@@ -82,6 +85,7 @@ export class LlmHubServerService {
       options.providerRegistry ?? new LlmHubProviderRegistry(seedProviders, seedModels);
     this.publicBaseUrl = options.publicBaseUrl;
     this.generateTextImpl = options.generateTextImpl ?? generateText;
+    this.codexCliRunner = options.codexCliRunner ?? runCodexCli;
     this.embedImpl = options.embedImpl ?? embed;
     this.embedManyImpl = options.embedManyImpl ?? embedMany;
   }
@@ -341,6 +345,28 @@ export class LlmHubServerService {
       input.providerId,
       input.modelId,
     );
+
+    if (providerId === 'codex-cli') {
+      await this.assertProviderConnected(providerId);
+      const result = await this.codexCliRunner({
+        modelId,
+        system: input.system,
+        prompt: input.prompt,
+        messages: input.messages,
+        maxOutputTokens: input.maxOutputTokens,
+        temperature: input.temperature,
+      });
+
+      return {
+        providerId,
+        modelId,
+        text: result.text,
+        finishReason: 'stop',
+        usage: undefined,
+        warnings: result.warnings,
+      };
+    }
+
     const model = await this.coreService.getLanguageModel(providerId, modelId);
     const baseOptions = {
       model,
@@ -754,6 +780,14 @@ export class LlmHubServerService {
     }
 
     return model;
+  }
+
+  private async assertProviderConnected(providerId: string): Promise<void> {
+    const connections = await this.coreService.listConnectedProviders();
+
+    if (!connections.some((connection) => connection.providerId === providerId)) {
+      throw new ProviderNotConnectedError(providerId);
+    }
   }
 
   private requireEmbeddingModel(providerId: string): ModelDefinition {

@@ -11,10 +11,12 @@ describe('getRuntimeConfig', () => {
       getRuntimeConfig({
         VITE_LLM_HUB_SERVER_URL: 'https://llm.example.com',
         VITE_SCREENSHOT_SERVER_URL: 'https://shots.example.com',
+        VITE_RUN_HISTORY_SERVER_URL: 'https://runs.example.com',
       }),
     ).toEqual({
       llmHubServerUrl: 'https://llm.example.com',
       screenshotServerUrl: 'https://shots.example.com',
+      runHistoryServerUrl: 'https://runs.example.com',
     })
   })
 })

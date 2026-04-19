@@ -3,6 +3,11 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const SettingsContext = createContext(null)
 
+const DEFAULT_GEMINI_MODEL = {
+    providerId: 'gemini',
+    modelId: 'gemini-3.1-pro-preview',
+}
+
 const STORAGE_KEYS = {
     SETTINGS: 'skill_eval_settings',
     LEGACY_API_KEY: 'skill_eval_api_key',
@@ -13,9 +18,9 @@ const STORAGE_KEYS = {
 
 const DEFAULT_SETTINGS = {
     theme: 'dark',
-    defaultConfigGenModel: null,
-    defaultEvalModel: null,
-    defaultJudgeModel: null,
+    defaultConfigGenModel: DEFAULT_GEMINI_MODEL,
+    defaultEvalModel: DEFAULT_GEMINI_MODEL,
+    defaultJudgeModel: DEFAULT_GEMINI_MODEL,
 }
 
 function loadSettings() {

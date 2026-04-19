@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+
 import { DEFAULT_FEATURE_FLAGS } from '../constants/feature-flags';
 import { AuthMethodNotFoundError, ProviderNotConnectedError } from '../errors';
 import { listCatalogModels } from '../models/catalog';
@@ -401,6 +403,28 @@ export class LlmHubCoreService {
         return fetch('https://api.deepinfra.com/v1/openai/models', {
           headers: { Authorization: `Bearer ${credential.secrets.apiKey}` },
         });
+      case 'codex-cli':
+        try {
+          if (process.platform === 'win32') {
+            execFileSync('cmd.exe', ['/d', '/s', '/c', 'codex.cmd login status'], {
+              encoding: 'utf8',
+              timeout: 10_000,
+              stdio: ['ignore', 'pipe', 'pipe'],
+            });
+          } else {
+            execFileSync('codex', ['login', 'status'], {
+              encoding: 'utf8',
+              timeout: 10_000,
+              stdio: ['ignore', 'pipe', 'pipe'],
+            });
+          }
+          return new Response(null, { status: 200 });
+        } catch (error) {
+          return new Response(
+            error instanceof Error ? error.message : 'Codex CLI login check failed.',
+            { status: 401 },
+          );
+        }
       case 'ollama': {
         const baseUrl = String(credential.values.baseURL ?? 'http://localhost:11434/api');
         return fetch(`${baseUrl.replace(/\/$/, '')}/tags`, {

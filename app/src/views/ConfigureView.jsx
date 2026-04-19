@@ -390,7 +390,7 @@ function ConfigureView() {
                                     onChange={(e) => setPromptCount(Number(e.target.value))}
                                     className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-2 py-1"
                                 >
-                                    {[10, 25, 50, 100].map(n => (
+                                    {[3, 5, 10, 25, 50, 100].map(n => (
                                         <option key={n} value={n}>{n}</option>
                                     ))}
                                 </select>

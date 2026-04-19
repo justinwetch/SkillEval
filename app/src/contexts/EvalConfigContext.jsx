@@ -72,6 +72,12 @@ export function EvalConfigProvider({ children }) {
         });
     }, [persistConfig]);
 
+    const replaceConfig = useCallback((nextConfig) => {
+        const newConfig = { ...DEFAULT_CONFIG, ...nextConfig };
+        setConfig(newConfig);
+        persistConfig(newConfig);
+    }, [persistConfig]);
+
     // Set skill file
     const setSkill = useCallback((side, skill) => {
         const field = side === 'A' ? 'skillA' : 'skillB';
@@ -316,6 +322,7 @@ export function EvalConfigProvider({ children }) {
             config,
             isGenerating,
             generationError,
+            replaceConfig,
             setSkill,
             setOutputType,
             setCriteria,

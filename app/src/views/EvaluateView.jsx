@@ -15,7 +15,15 @@ import {
     Download,
     RefreshCw,
     Edit3,
-    Shuffle
+    Shuffle,
+    Square,
+    CheckSquare2,
+    StopCircle,
+    Eye,
+    Code2,
+    History,
+    Trash2,
+    Plus
 } from 'lucide-react'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -25,6 +33,64 @@ import { useLlmHub } from '../contexts/LlmHubContext'
 import { useEvalConfig } from '../contexts/EvalConfigContext'
 import { useEvalRun } from '../contexts/EvalRunContext'
 import { checkServerHealth } from '../utils/screenshot'
+import { extractRenderableHtml } from '../utils/renderablePreview'
+
+function ResultPanel({ title, isWinner, winnerClassName, result }) {
+    const html = extractRenderableHtml(result?.content)
+    const [manualMode, setManualMode] = useState(null)
+    const mode = html ? (manualMode || 'preview') : 'code'
+
+    return (
+        <div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-medium text-[var(--color-text-muted)]">
+                        {title}
+                    </h3>
+                    {isWinner && (
+                        <Trophy size={14} className={winnerClassName} />
+                    )}
+                </div>
+                {html && !result?.error && (
+                    <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={() => setManualMode('preview')}
+                            className={`px-2 py-1 text-xs flex items-center gap-1 ${mode === 'preview' ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]'}`}
+                        >
+                            <Eye size={12} />
+                            Preview
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setManualMode('code')}
+                            className={`px-2 py-1 text-xs flex items-center gap-1 ${mode === 'code' ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]'}`}
+                        >
+                            <Code2 size={12} />
+                            Code
+                        </button>
+                    </div>
+                )}
+            </div>
+            {result?.error ? (
+                <div className="bg-[var(--color-bg-tertiary)] p-3 rounded-lg text-xs font-mono max-h-64 overflow-auto whitespace-pre-wrap">
+                    <span className="text-[var(--color-error)]">{result.error}</span>
+                </div>
+            ) : html && mode === 'preview' ? (
+                <iframe
+                    title={`${title} preview`}
+                    sandbox=""
+                    srcDoc={html}
+                    className="w-full h-80 rounded-lg border border-[var(--color-border)] bg-white"
+                />
+            ) : (
+                <div className="bg-[var(--color-bg-tertiary)] p-3 rounded-lg text-xs font-mono max-h-80 overflow-auto whitespace-pre-wrap">
+                    {result?.content || <span className="text-[var(--color-text-muted)]">Pending...</span>}
+                </div>
+            )}
+        </div>
+    )
+}
 
 function EvaluateView() {
     const { settings, updateSetting } = useSettings()
@@ -35,11 +101,19 @@ function EvaluateView() {
         runStatus,
         progress,
         runError,
+        historyError,
         startTime,
         endTime,
+        activeRunId,
+        activeRunName,
+        runHistory,
         stats,
         runGenerations,
         runJudgments,
+        requestStop,
+        startNewRun,
+        loadRun,
+        deleteRun,
         clearRunState
     } = useEvalRun()
 
@@ -48,6 +122,8 @@ function EvaluateView() {
     const [showAllPrompts, setShowAllPrompts] = useState(false)
     const [editingPromptIdx, setEditingPromptIdx] = useState(null)
     const [screenshotServerStatus, setScreenshotServerStatus] = useState(null)
+    const [selectedPromptIds, setSelectedPromptIds] = useState(new Set())
+    const [selectedRunId, setSelectedRunId] = useState('')
     const connectedLanguageModels = models.filter(
         (model) => model.connected && model.kind === 'language',
     )
@@ -72,6 +148,17 @@ function EvaluateView() {
         setJudgeModel(settings.defaultJudgeModel)
     }, [settings.defaultJudgeModel])
 
+    useEffect(() => {
+        setSelectedPromptIds((current) => {
+            const next = new Set([...current].filter((id) => id >= 1 && id <= config.prompts.length))
+            return next.size === current.size ? current : next
+        })
+    }, [config.prompts.length])
+
+    useEffect(() => {
+        setSelectedRunId(activeRunId || '')
+    }, [activeRunId])
+
     // Format elapsed time
     const formatTime = (ms) => {
         if (!ms) return '0s'
@@ -80,6 +167,11 @@ function EvaluateView() {
         const secs = seconds % 60
         if (mins > 0) return `${mins}m ${secs}s`
         return `${secs}s`
+    }
+
+    const formatDateTime = (value) => {
+        if (!value) return ''
+        return new Date(value).toLocaleString()
     }
 
     // Export results as JSON
@@ -240,6 +332,31 @@ function EvaluateView() {
 
     // Prompts to display
     const displayPrompts = showAllPrompts ? config.prompts : config.prompts.slice(0, 10)
+    const selectedIndexes = [...selectedPromptIds].map((id) => id - 1)
+    const selectedCount = selectedPromptIds.size
+    const selectedGeneratedRemaining = selectedIndexes.filter((idx) => {
+        const ev = evaluations[idx]
+        return !ev || ev.resultA?.status !== 'complete' || ev.resultB?.status !== 'complete'
+    }).length
+    const selectedJudgeRemaining = selectedIndexes.filter((idx) => {
+        const ev = evaluations[idx]
+        return ev?.resultA?.status === 'complete' &&
+            ev?.resultB?.status === 'complete' &&
+            ev?.judge?.status !== 'complete'
+    }).length
+    const isBusy = runStatus !== 'idle'
+    const isStopping = progress.phase === 'stopping'
+    const togglePromptSelection = (id) => {
+        setSelectedPromptIds((current) => {
+            const next = new Set(current)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }
+    const selectDisplayedPrompts = () => {
+        setSelectedPromptIds(new Set(displayPrompts.map((_, idx) => idx + 1)))
+    }
 
     return (
         <div className="animate-fade-in">
@@ -252,6 +369,59 @@ function EvaluateView() {
                     Run {config.prompts.length} prompts through both skills and judge the results
                 </p>
             </div>
+
+            <Card className="p-4 mb-6">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                        <div className="flex items-center gap-2 text-sm font-medium text-[var(--color-text-primary)]">
+                            <History size={16} />
+                            Run History
+                        </div>
+                        <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                            {activeRunId ? `Active: ${activeRunName || activeRunId}` : 'No active saved run'}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <select
+                            value={selectedRunId}
+                            onChange={(e) => setSelectedRunId(e.target.value)}
+                            className="text-sm px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] min-w-72"
+                        >
+                            <option value="">Select a saved run</option>
+                            {runHistory.map((run) => (
+                                <option key={run.id} value={run.id}>
+                                    {run.name} - {run.generatedCount}/{run.promptCount} generated, {run.judgedCount} judged - {formatDateTime(run.updatedAt)}
+                                </option>
+                            ))}
+                        </select>
+                        <Button
+                            variant="secondary"
+                            onClick={() => loadRun(selectedRunId)}
+                            disabled={isBusy || !selectedRunId}
+                        >
+                            Load
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => deleteRun(selectedRunId)}
+                            disabled={isBusy || !selectedRunId}
+                        >
+                            <Trash2 size={16} />
+                            Delete
+                        </Button>
+                        <Button
+                            onClick={startNewRun}
+                            disabled={isBusy}
+                        >
+                            <Plus size={16} />
+                            Start New Run
+                        </Button>
+                    </div>
+                </div>
+                {historyError && (
+                    <p className="text-sm text-[var(--color-error)] mt-3">{historyError}</p>
+                )}
+            </Card>
 
             {/* Screenshot Server Warning */}
             {(config.outputType === 'visual' || config.outputType === 'both') && screenshotServerStatus && !screenshotServerStatus.available && (
@@ -294,7 +464,7 @@ function EvaluateView() {
                             {config.prompts.length} prompts
                         </span>
                     </div>
-                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-3 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
                         {/* Model Selector */}
                         <select
                             value={selectionValue(generationModel)}
@@ -315,15 +485,38 @@ function EvaluateView() {
                                 </option>
                             ))}
                         </select>
-                        {/* Run All Button */}
+                        <Button
+                            variant="secondary"
+                            onClick={() => runGenerations(generationModel, { promptIndexes: selectedIndexes })}
+                            disabled={isBusy || selectedCount === 0}
+                        >
+                            <Play size={16} />
+                            Run Selected
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => runGenerations(generationModel, { resumeOnly: true })}
+                            disabled={isBusy || evaluations.length === 0 || stats.generationRemainingCount === 0}
+                        >
+                            <RefreshCw size={16} />
+                            Resume All
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => runGenerations(generationModel, { promptIndexes: selectedIndexes, resumeOnly: true })}
+                            disabled={isBusy || selectedGeneratedRemaining === 0}
+                        >
+                            <RefreshCw size={16} />
+                            Resume Selected
+                        </Button>
                         <Button
                             onClick={() => runGenerations(generationModel)}
-                            disabled={runStatus !== 'idle'}
+                            disabled={isBusy}
                         >
                             {runStatus === 'generating' ? (
                                 <>
                                     <Loader2 size={16} className="animate-spin" />
-                                    Running ({progress.current}/{progress.total})
+                                    {isStopping ? 'Stopping...' : `Running (${progress.current}/${progress.total})`}
                                 </>
                             ) : (
                                 <>
@@ -332,6 +525,12 @@ function EvaluateView() {
                                 </>
                             )}
                         </Button>
+                        {runStatus === 'generating' && (
+                            <Button variant="secondary" onClick={requestStop} disabled={isStopping}>
+                                <StopCircle size={16} />
+                                Stop after batch
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -342,19 +541,48 @@ function EvaluateView() {
                 {/* Eval Rows - Collapsible */}
                 {promptsExpanded && (
                     <>
+                        <div className="flex items-center justify-between gap-3 mt-4 text-xs text-[var(--color-text-muted)]">
+                            <span>{selectedCount} selected</span>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={selectDisplayedPrompts}
+                                    className="hover:text-[var(--color-accent)]"
+                                >
+                                    Select visible
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedPromptIds(new Set())}
+                                    className="hover:text-[var(--color-accent)]"
+                                >
+                                    Clear selection
+                                </button>
+                            </div>
+                        </div>
                         <div className="space-y-2 mt-4">
                             {displayPrompts.map((prompt, idx) => {
                                 const status = getPromptStatus(idx)
                                 const ev = evaluations[idx]
+                                const id = idx + 1
+                                const selected = selectedPromptIds.has(id)
 
                                 return (
                                     <div
                                         key={idx}
-                                        className="flex items-start gap-4 p-4 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border)]"
+                                        className={`flex items-start gap-4 p-4 bg-[var(--color-bg-tertiary)] rounded-lg border ${selected ? 'border-[var(--color-accent)]' : 'border-[var(--color-border)]'}`}
                                     >
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePromptSelection(id)}
+                                            className="mt-1 text-[var(--color-text-muted)] hover:text-[var(--color-accent)]"
+                                            aria-label={selected ? `Deselect prompt ${id}` : `Select prompt ${id}`}
+                                        >
+                                            {selected ? <CheckSquare2 size={18} /> : <Square size={18} />}
+                                        </button>
                                         {/* Number */}
                                         <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-[var(--color-text-secondary)] flex items-center justify-center font-semibold text-sm">
-                                            {idx + 1}
+                                            {id}
                                         </div>
 
                                         {/* Prompt Text */}
@@ -426,8 +654,8 @@ function EvaluateView() {
 
             {/* Judge All & Timer Bar */}
             <Card className="p-4 mb-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 flex-wrap">
                         {/* Judge Model Selector */}
                         <select
                             value={selectionValue(judgeModel)}
@@ -449,13 +677,29 @@ function EvaluateView() {
                             ))}
                         </select>
                         <Button
+                            variant="secondary"
+                            onClick={() => runJudgments(judgeModel, { evaluationIds: [...selectedPromptIds] })}
+                            disabled={isBusy || selectedJudgeRemaining === 0}
+                        >
+                            <Scale size={16} />
+                            Judge Selected
+                        </Button>
+                        <Button
+                            variant="ghost"
                             onClick={() => runJudgments(judgeModel)}
-                            disabled={runStatus !== 'idle' || !stats.canJudge}
+                            disabled={isBusy || !stats.canJudge}
+                        >
+                            <RefreshCw size={16} />
+                            Resume Judging
+                        </Button>
+                        <Button
+                            onClick={() => runJudgments(judgeModel)}
+                            disabled={isBusy || !stats.canJudge}
                         >
                             {runStatus === 'judging' ? (
                                 <>
                                     <Loader2 size={16} className="animate-spin" />
-                                    Judging ({progress.current}/{progress.total})
+                                    {isStopping ? 'Stopping...' : `Judging (${progress.current}/${progress.total})`}
                                 </>
                             ) : (
                                 <>
@@ -464,6 +708,12 @@ function EvaluateView() {
                                 </>
                             )}
                         </Button>
+                        {runStatus === 'judging' && (
+                            <Button variant="secondary" onClick={requestStop} disabled={isStopping}>
+                                <StopCircle size={16} />
+                                Stop after batch
+                            </Button>
+                        )}
                         <Button variant="ghost" onClick={clearRunState}>
                             Clear All
                         </Button>
@@ -741,44 +991,19 @@ function EvaluateView() {
                                         </div>
 
                                         {/* Results side by side */}
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {/* Result A */}
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <h3 className="text-sm font-medium text-[var(--color-text-muted)]">
-                                                        Result A ({config.skillA.filename || 'Skill A'})
-                                                    </h3>
-                                                    {ev.judge.scores?.winner === 'A' && (
-                                                        <Trophy size={14} className="text-blue-500" />
-                                                    )}
-                                                </div>
-                                                <div className="bg-[var(--color-bg-tertiary)] p-3 rounded-lg text-xs font-mono max-h-64 overflow-auto whitespace-pre-wrap">
-                                                    {ev.resultA.error ? (
-                                                        <span className="text-[var(--color-error)]">{ev.resultA.error}</span>
-                                                    ) : (
-                                                        ev.resultA.content || <span className="text-[var(--color-text-muted)]">Pending...</span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Result B */}
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <h3 className="text-sm font-medium text-[var(--color-text-muted)]">
-                                                        Result B ({config.skillB.filename || 'Skill B'})
-                                                    </h3>
-                                                    {ev.judge.scores?.winner === 'B' && (
-                                                        <Trophy size={14} className="text-orange-500" />
-                                                    )}
-                                                </div>
-                                                <div className="bg-[var(--color-bg-tertiary)] p-3 rounded-lg text-xs font-mono max-h-64 overflow-auto whitespace-pre-wrap">
-                                                    {ev.resultB.error ? (
-                                                        <span className="text-[var(--color-error)]">{ev.resultB.error}</span>
-                                                    ) : (
-                                                        ev.resultB.content || <span className="text-[var(--color-text-muted)]">Pending...</span>
-                                                    )}
-                                                </div>
-                                            </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <ResultPanel
+                                                title={`Result A (${config.skillA.filename || 'Skill A'})`}
+                                                isWinner={ev.judge.scores?.winner === 'A'}
+                                                winnerClassName="text-blue-500"
+                                                result={ev.resultA}
+                                            />
+                                            <ResultPanel
+                                                title={`Result B (${config.skillB.filename || 'Skill B'})`}
+                                                isWinner={ev.judge.scores?.winner === 'B'}
+                                                winnerClassName="text-orange-500"
+                                                result={ev.resultB}
+                                            />
                                         </div>
 
                                         {/* Judge Result */}

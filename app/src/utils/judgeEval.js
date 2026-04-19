@@ -4,6 +4,11 @@ import { buildJudgeMessages } from './buildJudgeMessages'
 import { runWithConcurrency } from './concurrency'
 import { captureScreenshots } from './screenshot'
 
+function normalizeIds(evaluationIds) {
+    if (!evaluationIds) return null
+    return new Set(evaluationIds.filter((id) => Number.isInteger(id)))
+}
+
 export async function judgeSingleEval({
     adapter,
     modelSelection,
@@ -70,9 +75,13 @@ export async function judgeAllEvals({
     criteria,
     outputType,
     skillNames,
+    evaluationIds,
     onProgress,
+    shouldStop = () => false,
 }) {
+    const targetIds = normalizeIds(evaluationIds)
     const evalsToJudge = evaluations.filter(ev =>
+        (!targetIds || targetIds.has(ev.id)) &&
         ev.resultA.status === 'complete' &&
         ev.resultB.status === 'complete' &&
         ev.judge.status !== 'complete',
@@ -80,7 +89,11 @@ export async function judgeAllEvals({
     const total = evalsToJudge.length
     let completed = 0
 
+    onProgress?.({ current: completed, total, phase: 'judging' })
+
     await runWithConcurrency(evalsToJudge, 3, async (ev) => {
+        if (shouldStop()) return
+
         const result = await judgeSingleEval({
             adapter,
             modelSelection,

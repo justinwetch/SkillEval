@@ -201,6 +201,56 @@ export const seedProviders: RegisteredProviderDefinition[] = [
   }),
   {
     provider: {
+      id: 'codex-cli',
+      displayName: 'Codex CLI',
+      description:
+        'Runs local Codex CLI generations using the existing ChatGPT login on this machine.',
+      website: 'https://platform.openai.com/docs/codex',
+      kind: 'local',
+      authMethods: [
+        {
+          id: 'existing_chatgpt_login',
+          kind: 'local',
+          label: 'Existing ChatGPT login',
+          description:
+            'Use the local Codex CLI account from `codex login`; no OAuth token is copied into SkillEval.',
+          badges: ['chatgpt', 'local'],
+          supportsTesting: true,
+        },
+      ],
+      defaultAuthMethodId: 'existing_chatgpt_login',
+      capabilities: ['tools', 'reasoning', 'local'],
+      badges: ['codex', 'chatgpt-login'],
+      warnings: [
+        'Codex CLI runs as a local process and is best used for generation, not high-volume judging.',
+      ],
+    },
+    methods: {
+      existing_chatgpt_login: {
+        method: {
+          id: 'existing_chatgpt_login',
+          kind: 'local',
+          label: 'Existing ChatGPT login',
+          description:
+            'Use the local Codex CLI account from `codex login`; no OAuth token is copied into SkillEval.',
+          badges: ['chatgpt', 'local'],
+          supportsTesting: true,
+        },
+        inputSchema: payloadSchema(z.object({})),
+        sections: [
+          section(
+            'codex-cli-local',
+            'Local Codex CLI login',
+            [],
+            'SkillEval will call `codex exec` and let the Codex CLI use its existing ChatGPT login.',
+          ),
+        ],
+        secretFieldKeys: [],
+      },
+    },
+  },
+  {
+    provider: {
       id: 'codex-bridge',
       displayName: 'Codex Bridge',
       description:

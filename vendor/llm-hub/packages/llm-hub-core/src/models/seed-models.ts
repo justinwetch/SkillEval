@@ -125,6 +125,31 @@ export const seedModels: ModelDefinition[] = [
     tags: ['bridge', 'coding', 'reasoning'],
   }),
 
+  languageModel('codex-cli', 'gpt-5.4', 'Codex CLI - GPT-5.4', {
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['codex-cli', 'reasoning'],
+  }),
+  languageModel('codex-cli', 'gpt-5.4-mini', 'Codex CLI - GPT-5.4 Mini', {
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['codex-cli', 'coding', 'fast'],
+  }),
+  languageModel('codex-cli', 'gpt-5.3-codex', 'Codex CLI - GPT-5.3-Codex', {
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['codex-cli', 'coding', 'reasoning'],
+  }),
+  languageModel('codex-cli', 'gpt-5.2', 'Codex CLI - GPT-5.2', {
+    supportsTools: true,
+    supportsVision: true,
+    supportsReasoning: true,
+    tags: ['codex-cli', 'reasoning'],
+  }),
+
   languageModel('anthropic', 'claude-haiku-3-5', 'Claude Haiku 3.5', {
     supportsStreaming: true,
     supportsTools: true,

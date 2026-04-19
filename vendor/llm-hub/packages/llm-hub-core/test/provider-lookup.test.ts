@@ -40,6 +40,7 @@ describe('provider lookup', () => {
       expect.arrayContaining([
         'openai',
         'codex-bridge',
+        'codex-cli',
         'anthropic',
         'gemini',
         'github-models',
@@ -53,6 +54,17 @@ describe('provider lookup', () => {
       expect.arrayContaining(['api_key', 'oauth_pkce']),
     );
     expect(codexBridgeMethods).toEqual(expect.arrayContaining(['oauth_pkce']));
+    expect(service.getAuthMethods('codex-cli').map((method) => method.id)).toEqual(
+      expect.arrayContaining(['existing_chatgpt_login']),
+    );
+    expect(service.listModels('codex-cli').map((model) => model.modelId)).toEqual(
+      expect.arrayContaining([
+        'gpt-5.4',
+        'gpt-5.4-mini',
+        'gpt-5.3-codex',
+        'gpt-5.2',
+      ]),
+    );
     expect(codexBridgeModels).toEqual(
       expect.arrayContaining([
         'gpt-5',

@@ -82,6 +82,10 @@ export class LlmHubProviderRegistry {
           return accumulator;
         }
 
+        if (connection.providerId === 'codex-cli') {
+          return accumulator;
+        }
+
         const credential = credentialsById.get(connection.credentialId);
 
         if (!credential) {

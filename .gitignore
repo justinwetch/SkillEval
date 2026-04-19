@@ -2,6 +2,8 @@
 node_modules/
 .demo-logs/
 .llm-hub-skilleval/
+data/*.sqlite
+data/*.sqlite-*
 .worktrees/
 vendor/llm-hub/node_modules/
 vendor/llm-hub/package-lock.json
