@@ -5,10 +5,10 @@ import { AuthMethodSelector } from '../src/components/AuthMethodSelector';
 import type { LLMHubUIAdapter } from '../src/lib/adapter';
 
 describe('AuthMethodSelector', () => {
-  it('renders unofficial Google OAuth through the generic method list', async () => {
+  it('renders generic auth method metadata and unavailable badges', async () => {
     const adapter = {
       getAuthMethods: vi.fn(async () => ({
-        providerId: 'gemini',
+        providerId: 'openrouter',
         authMethods: [
           {
             id: 'api_key',
@@ -21,15 +21,15 @@ describe('AuthMethodSelector', () => {
             schemaSummary: { fieldGroups: [], totalFields: 1, requiredFieldKeys: ['apiKey'] },
           },
           {
-            id: 'oauth_unofficial',
-            label: 'Unofficial Google OAuth',
+            id: 'oauth_pkce',
+            label: 'OAuth PKCE',
             type: 'oauth_pkce',
             uxMode: 'oauth_redirect',
-            warning: 'Unofficial experimental option.',
+            warning: 'OAuth is temporarily unavailable.',
             experimental: true,
             available: false,
             availabilityMessage: 'This auth method is not yet available.',
-            badges: ['oauth', 'unofficial'],
+            badges: ['oauth'],
             schemaSummary: { fieldGroups: [], totalFields: 0, requiredFieldKeys: [] },
           },
         ],
@@ -39,13 +39,13 @@ describe('AuthMethodSelector', () => {
     render(
       <AuthMethodSelector
         adapter={adapter}
-        providerId="gemini"
+        providerId="openrouter"
         selectedMethodId={null}
         onSelect={vi.fn()}
       />,
     );
 
-    expect(await screen.findByText('Unofficial Google OAuth')).toBeInTheDocument();
+    expect(await screen.findByText('OAuth PKCE')).toBeInTheDocument();
     expect(screen.getByText('experimental')).toBeInTheDocument();
     expect(screen.getByText('unavailable')).toBeInTheDocument();
   });

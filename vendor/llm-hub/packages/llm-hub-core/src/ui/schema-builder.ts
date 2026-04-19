@@ -207,7 +207,11 @@ export function buildProviderUISchema(options: {
     providerBadges: [...options.provider.provider.badges],
     capabilityBadges: [...options.provider.provider.capabilities],
     warnings,
-    sections: [authMethodSection, ...methodSections, modelPickerSection],
+    sections: [
+      ...(enabledMethods.length > 1 ? [authMethodSection] : []),
+      ...methodSections,
+      modelPickerSection,
+    ],
     actions,
   };
 

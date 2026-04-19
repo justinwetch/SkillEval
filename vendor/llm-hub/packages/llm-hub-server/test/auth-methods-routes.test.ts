@@ -30,22 +30,20 @@ describe('/providers/:id/auth-methods', () => {
     );
   });
 
-  it('surfaces the unofficial Google OAuth placeholder through the same contract', async () => {
+  it('returns only the supported Gemini API-key auth method', async () => {
     const { app } = createTestServer();
     const response = await app.request('/providers/gemini/auth-methods');
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.authMethods).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'oauth_unofficial',
-          uxMode: 'oauth_redirect',
-          experimental: true,
-          available: false,
-          availabilityMessage: expect.stringMatching(/not implemented/i),
-        }),
-      ]),
+    expect(body.authMethods).toHaveLength(1);
+    expect(body.authMethods[0]).toEqual(
+      expect.objectContaining({
+        id: 'api_key',
+        type: 'api_key',
+        uxMode: 'form',
+        available: true,
+      }),
     );
   });
 });

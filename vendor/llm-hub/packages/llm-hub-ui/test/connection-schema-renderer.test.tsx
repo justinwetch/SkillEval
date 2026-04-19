@@ -6,13 +6,13 @@ import type { LLMHubUIAdapter } from '../src/lib/adapter';
 import type { AuthMethodContract, ProviderSchemaContract, ProviderSummaryContract } from '../src/types';
 
 const provider: ProviderSummaryContract = {
-  id: 'gemini',
-  name: 'Gemini',
-  category: 'direct_api_key',
+  id: 'codex-bridge',
+  name: 'Codex Bridge',
+  category: 'oauth',
   connected: false,
   default: false,
   availableAuthMethods: [],
-  capabilities: ['tools', 'vision'],
+  capabilities: ['tools', 'vision', 'oauth'],
   warningBadges: [],
   experimental: false,
   uiHints: {
@@ -29,17 +29,17 @@ const schemaResponse: ProviderSchemaContract = {
   hostMode: 'full_settings_page',
   schema: {
     provider: {
-      id: 'gemini',
-      displayName: 'Gemini',
+      id: 'codex-bridge',
+      displayName: 'Codex Bridge',
       description: 'Demo',
-      kind: 'direct_api_key',
+      kind: 'oauth',
       authMethods: [],
-      defaultAuthMethodId: 'oauth_unofficial',
-      capabilities: ['tools'],
+      defaultAuthMethodId: 'oauth_pkce',
+      capabilities: ['tools', 'oauth'],
       badges: [],
       warnings: [],
     },
-    selectedAuthMethodId: 'oauth_unofficial',
+    selectedAuthMethodId: 'oauth_pkce',
     status: 'disconnected',
     statusBadge: { label: 'Disconnected', tone: 'neutral' },
     providerBadges: [],
@@ -70,21 +70,21 @@ const schemaResponse: ProviderSchemaContract = {
   validationErrors: {},
   successStateText: 'Connected.',
   emptyStateText: 'Choose a method.',
-  experimentalWarnings: ['Unofficial experimental option. Not implemented yet and should be treated as preview-only UI.'],
+  experimentalWarnings: [],
   conditionalVisibility: [],
 };
 
 const unavailableMethod: AuthMethodContract = {
-  id: 'oauth_unofficial',
-  label: 'Unofficial Google OAuth',
+  id: 'oauth_pkce',
+  label: 'Codex OAuth bridge',
   type: 'oauth_pkce',
   uxMode: 'oauth_redirect',
-  description: 'Experimental placeholder',
-  warning: 'Unofficial experimental option. Not implemented yet and should be treated as preview-only UI.',
-  experimental: true,
+  description: 'OAuth bridge',
+  warning: 'Codex OAuth is unavailable until the local bridge is configured.',
+  experimental: false,
   available: false,
   availabilityMessage: 'This auth method is not yet available.',
-  badges: ['oauth', 'unofficial'],
+  badges: ['oauth', 'bridge'],
   schemaSummary: {
     fieldGroups: [],
     totalFields: 0,
@@ -93,14 +93,14 @@ const unavailableMethod: AuthMethodContract = {
 };
 
 describe('ConnectionSchemaRenderer', () => {
-  it('renders unavailable experimental OAuth flows without provider-specific forms', async () => {
+  it('renders unavailable OAuth flows without provider-specific forms', async () => {
     const adapter = {
       getUISchema: vi.fn(async () => schemaResponse),
       disconnect: vi.fn(),
       testConnection: vi.fn(),
       connect: vi.fn(),
       startOAuth: vi.fn(),
-      createOAuthCallbackUrl: vi.fn(() => 'http://localhost:3001/oauth/gemini/callback?format=html'),
+      createOAuthCallbackUrl: vi.fn(() => 'http://localhost:3001/oauth/codex-bridge/callback?format=html'),
     } as unknown as LLMHubUIAdapter;
 
     render(

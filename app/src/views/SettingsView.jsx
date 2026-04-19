@@ -184,6 +184,7 @@ function SettingsView() {
                                 provider={selectedProvider}
                                 authMethod={selectedAuthMethod}
                                 hostMode="full_settings_page"
+                                className="skill-eval-llm-hub"
                                 onMutation={async () => refresh()}
                                 density="comfortable"
                             />

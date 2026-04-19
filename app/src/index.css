@@ -319,6 +319,87 @@ select {
   cursor: pointer;
 }
 
+.skill-eval-llm-hub {
+  --llm-hub-ui-surface: color-mix(in srgb, var(--color-bg-secondary) 92%, transparent);
+  --llm-hub-ui-surface-strong: var(--color-bg-secondary);
+  --llm-hub-ui-surface-muted: var(--color-bg-tertiary);
+  --llm-hub-ui-border: color-mix(in srgb, var(--color-border) 88%, transparent);
+  --llm-hub-ui-text: var(--color-text-primary);
+  --llm-hub-ui-text-soft: var(--color-text-secondary);
+  --llm-hub-ui-accent: var(--color-accent);
+  --llm-hub-ui-accent-soft: var(--color-accent-subtle);
+  --llm-hub-ui-success: var(--color-success);
+  --llm-hub-ui-warning: var(--color-warning);
+  --llm-hub-ui-danger: var(--color-error);
+  --llm-hub-ui-shadow: none;
+}
+
+.skill-eval-llm-hub.llm-hub-ui-schema-renderer {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.skill-eval-llm-hub .llm-hub-ui-eyebrow {
+  color: var(--color-accent);
+}
+
+.skill-eval-llm-hub .llm-hub-ui-schema-renderer__header {
+  margin-bottom: 0.75rem;
+}
+
+.skill-eval-llm-hub .llm-hub-ui-schema-renderer__sections {
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.skill-eval-llm-hub .llm-hub-ui-schema-section,
+.skill-eval-llm-hub .llm-hub-ui-warning,
+.skill-eval-llm-hub .llm-hub-ui-field__control,
+.skill-eval-llm-hub .llm-hub-ui-radio-option,
+.skill-eval-llm-hub .llm-hub-ui-status-badge,
+.skill-eval-llm-hub .llm-hub-ui-chip {
+  box-shadow: none;
+}
+
+.skill-eval-llm-hub .llm-hub-ui-schema-section,
+.skill-eval-llm-hub .llm-hub-ui-warning {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+.skill-eval-llm-hub .llm-hub-ui-field__control,
+.skill-eval-llm-hub .llm-hub-ui-model-selector select {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.skill-eval-llm-hub .llm-hub-ui-field__control::placeholder {
+  color: var(--color-text-muted);
+}
+
+.skill-eval-llm-hub .llm-hub-ui-radio-option {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border);
+}
+
+.skill-eval-llm-hub .llm-hub-ui-action-bar--sticky_footer {
+  background: linear-gradient(
+    180deg,
+    rgba(28, 27, 24, 0),
+    rgba(28, 27, 24, 0.88) 35%,
+    rgba(28, 27, 24, 0.98)
+  );
+}
+
+.skill-eval-llm-hub .llm-hub-ui-action-button--secondary {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
 /* Custom Checkbox */
 input[type="checkbox"] {
   appearance: none;

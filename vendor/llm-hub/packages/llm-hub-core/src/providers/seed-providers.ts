@@ -128,19 +128,6 @@ const directProviders = [
   },
 ] satisfies Array<Omit<ProviderDefinition, 'authMethods' | 'defaultAuthMethodId'>>;
 
-const unofficialGoogleOauthMethod: ProviderAuthMethod = {
-  id: 'oauth_unofficial',
-  kind: 'oauth_pkce',
-  label: 'Unofficial Google OAuth',
-  description:
-    'Experimental placeholder for a future unofficial Google OAuth flow rendered through the generic schema contract.',
-  badges: ['oauth', 'unofficial'],
-  experimental: true,
-  warning:
-    'Unofficial experimental option. Not implemented yet and should be treated as preview-only UI.',
-  supportsTesting: false,
-};
-
 const codexBridgeOAuthMethod: ProviderAuthMethod = {
   id: 'oauth_pkce',
   kind: 'oauth_pkce',
@@ -162,46 +149,15 @@ const codexBridgeOAuthMethod: ProviderAuthMethod = {
 export const seedProviders: RegisteredProviderDefinition[] = [
   ...directProviders.map((providerBase) => {
     const apiKey = apiKeyMethod(providerBase.displayName);
-    const authMethods =
-      providerBase.id === 'gemini'
-        ? [apiKey.method, unofficialGoogleOauthMethod]
-        : [apiKey.method];
-    const methods =
-      providerBase.id === 'gemini'
-        ? {
-            [apiKey.method.id]: {
-              method: apiKey.method,
-              inputSchema: apiKey.inputSchema,
-              sections: apiKey.sections,
-              secretFieldKeys: ['apiKey'],
-            },
-            oauth_unofficial: {
-              method: unofficialGoogleOauthMethod,
-              inputSchema: payloadSchema(z.object({})),
-              sections: [
-                {
-                  id: 'oauth-unofficial',
-                  title: 'Unofficial Google OAuth',
-                  description:
-                    'This placeholder exists to prove the UI contract can expose future auth paths without adding provider-specific forms.',
-                  badges: ['experimental'],
-                  warnings: [
-                    'Unavailable preview. The backend intentionally does not complete this flow yet.',
-                  ],
-                  fields: [],
-                },
-              ],
-              secretFieldKeys: [],
-            },
-          }
-        : {
-            [apiKey.method.id]: {
-              method: apiKey.method,
-              inputSchema: apiKey.inputSchema,
-              sections: apiKey.sections,
-              secretFieldKeys: ['apiKey'],
-            },
-          };
+    const authMethods = [apiKey.method];
+    const methods = {
+      [apiKey.method.id]: {
+        method: apiKey.method,
+        inputSchema: apiKey.inputSchema,
+        sections: apiKey.sections,
+        secretFieldKeys: ['apiKey'],
+      },
+    };
 
     return {
       provider: {
