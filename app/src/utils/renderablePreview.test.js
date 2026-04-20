@@ -16,6 +16,13 @@ describe('extractRenderableHtml', () => {
         expect(extractRenderableHtml(doc)).toBe(doc)
     })
 
+    it('extracts an unterminated html fence from model output', () => {
+        const html = extractRenderableHtml('```html\n<button class="watch-cta">Reserve your private viewing</button>')
+
+        expect(html).toContain('<!doctype html>')
+        expect(html).toContain('watch-cta')
+    })
+
     it('does not preview React component source as plain html', () => {
         const source = "import React from 'react'\nexport default function Button() { return <button>Buy</button> }"
 

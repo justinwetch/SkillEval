@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Cpu, RefreshCw, Trash2, WifiOff } from 'lucide-react'
+import { CheckCircle2, Cpu, RefreshCw, Trash2, WifiOff } from 'lucide-react'
 import '@llm-hub/ui/styles.css'
 import { ConnectionSchemaRenderer, ProviderStatusBadge, WarningCallout } from '@llm-hub/ui'
 import { useSettings } from '../contexts/SettingsContext'
 import { useLlmHub } from '../contexts/LlmHubContext'
+import Badge from '../components/Badge'
 import Card from '../components/Card'
 import Button from '../components/Button'
 
@@ -14,10 +15,17 @@ function formatModelLabel(model) {
 function SettingsView() {
     const { settings, updateSetting } = useSettings()
     const { adapter, providers, connectedProviders, models, isLoading, error, refresh } = useLlmHub()
+    const [activeSettingsSection, setActiveSettingsSection] = useState('connections')
     const [selectedProviderId, setSelectedProviderId] = useState('')
     const [authMethods, setAuthMethods] = useState([])
     const [selectedAuthMethodId, setSelectedAuthMethodId] = useState('')
     const [connectionFeedback, setConnectionFeedback] = useState(null)
+    const [defaultsDraft, setDefaultsDraft] = useState({
+        defaultConfigGenModel: settings.defaultConfigGenModel,
+        defaultEvalModel: settings.defaultEvalModel,
+        defaultJudgeModel: settings.defaultJudgeModel,
+    })
+    const [defaultsSaved, setDefaultsSaved] = useState(false)
     const effectiveSelectedProviderId = selectedProviderId || providers[0]?.id || ''
     const selectedProvider = providers.find((provider) => provider.id === effectiveSelectedProviderId)
     const selectedAuthMethod = authMethods.find((method) => method.id === selectedAuthMethodId)
@@ -31,12 +39,50 @@ function SettingsView() {
     const connectedLanguageModels = models.filter(
         (model) => model.connected && model.kind === 'language',
     )
+    const settingsSections = [
+        {
+            id: 'connections',
+            title: 'Connections',
+            description: connectedProviders.length === 0 ? 'No active providers' : `${connectedProviders.length} active provider${connectedProviders.length === 1 ? '' : 's'}`,
+        },
+        {
+            id: 'defaults',
+            title: 'Defaults',
+            description: connectedLanguageModels.length === 0 ? 'No connected models yet' : `${connectedLanguageModels.length} connected model${connectedLanguageModels.length === 1 ? '' : 's'}`,
+        },
+        {
+            id: 'data',
+            title: 'Data',
+            description: 'Reset saved settings and runs',
+        },
+    ]
 
     const handleClearData = () => {
         if (window.confirm('Are you sure you want to clear all saved data? This cannot be undone.')) {
             localStorage.clear()
             window.location.reload()
         }
+    }
+
+    const handleDisconnectProvider = async (provider) => {
+        if (!window.confirm(`Disconnect ${provider.name}? Stored credentials for this provider will be removed.`)) {
+            return
+        }
+
+        try {
+            await adapter.disconnect(provider.id)
+            setConnectionFeedback({ tone: 'success', text: `${provider.name} disconnected.` })
+            await refresh()
+        } catch (disconnectError) {
+            setConnectionFeedback({ tone: 'danger', text: disconnectError.message })
+        }
+    }
+
+    const handleSaveDefaults = () => {
+        updateSetting('defaultConfigGenModel', defaultsDraft.defaultConfigGenModel)
+        updateSetting('defaultEvalModel', defaultsDraft.defaultEvalModel)
+        updateSetting('defaultJudgeModel', defaultsDraft.defaultJudgeModel)
+        setDefaultsSaved(true)
     }
 
     useEffect(() => {
@@ -76,9 +122,13 @@ function SettingsView() {
                 {label}
             </label>
             <select
-                value={settings[settingKey] ? JSON.stringify(settings[settingKey]) : ''}
+                value={defaultsDraft[settingKey] ? JSON.stringify(defaultsDraft[settingKey]) : ''}
                 onChange={(event) => {
-                    updateSetting(settingKey, event.target.value ? JSON.parse(event.target.value) : null)
+                    setDefaultsSaved(false)
+                    setDefaultsDraft((current) => ({
+                        ...current,
+                        [settingKey]: event.target.value ? JSON.parse(event.target.value) : null,
+                    }))
                 }}
                 className="w-full"
                 disabled={connectedLanguageModels.length === 0}
@@ -114,6 +164,29 @@ function SettingsView() {
                 </p>
             </div>
 
+            <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2">
+                {settingsSections.map((section) => (
+                    <button
+                        key={section.id}
+                        type="button"
+                        onClick={() => setActiveSettingsSection(section.id)}
+                        className={`rounded-xl px-4 py-3 text-left transition-colors ${activeSettingsSection === section.id
+                            ? 'bg-[var(--color-bg-primary)] shadow-sm'
+                            : 'hover:bg-[var(--color-bg-tertiary)]'
+                            }`}
+                    >
+                        <div className="text-sm font-semibold text-[var(--color-text-primary)]">{section.title}</div>
+                        <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{section.description}</div>
+                    </button>
+                ))}
+            </div>
+
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+                <Badge variant="success">{connectedProviders.length} Provider{connectedProviders.length === 1 ? '' : 's'} Connected</Badge>
+                <Badge variant="success">{connectedLanguageModels.length} Model{connectedLanguageModels.length === 1 ? '' : 's'} Available</Badge>
+            </div>
+
+            {activeSettingsSection === 'connections' ? (
             <Card padding="none" className="p-8 mb-6">
                 <div className="flex items-start gap-5 mb-6">
                     <div className="w-12 h-12 rounded-2xl bg-[var(--color-accent-subtle)] flex items-center justify-center text-[var(--color-accent)] flex-shrink-0">
@@ -148,6 +221,59 @@ function SettingsView() {
                                 ? 'No connected providers yet. Connect Gemini with an API key or Codex through OAuth.'
                                 : `${connectedProviders.length} provider connection${connectedProviders.length === 1 ? '' : 's'} available.`}
                         </p>
+
+                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4">
+                            <div className="flex items-center justify-between gap-3 mb-3">
+                                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                                    Connected providers
+                                </h3>
+                                <span className="text-xs text-[var(--color-text-muted)]">
+                                    {connectedProviders.length} active
+                                </span>
+                            </div>
+                            {connectedProviders.length === 0 ? (
+                                <p className="text-sm text-[var(--color-text-muted)]">
+                                    No providers are connected yet.
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {connectedProviders.map((provider) => {
+                                        const providerModels = models.filter(
+                                            (model) => model.connected && model.providerId === provider.id && model.kind === 'language',
+                                        )
+
+                                        return (
+                                            <div
+                                                key={provider.id}
+                                                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] px-3 py-2"
+                                            >
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                                                            {provider.name}
+                                                        </span>
+                                                        <ProviderStatusBadge
+                                                            connected
+                                                            experimental={provider.experimental}
+                                                        />
+                                                    </div>
+                                                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                                                        {providerModels.length} connected model{providerModels.length === 1 ? '' : 's'}
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDisconnectProvider(provider)}
+                                                >
+                                                    Disconnect
+                                                </Button>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
                             <label className="block">
@@ -239,7 +365,9 @@ function SettingsView() {
                     </div>
                 )}
             </Card>
+            ) : null}
 
+            {activeSettingsSection === 'defaults' ? (
             <Card padding="none" className="p-8 mb-6">
                 <div className="flex items-start gap-5 mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-[var(--color-accent-subtle)] flex items-center justify-center text-[var(--color-accent)] flex-shrink-0">
@@ -271,9 +399,30 @@ function SettingsView() {
                         'defaultJudgeModel',
                         'Used to compare outputs and produce scores.',
                     )}
+                    <div className="flex items-center justify-between gap-3 pt-2">
+                        <p className="text-xs text-[var(--color-text-muted)]">
+                            Defaults are applied to new stage selectors after saving.
+                        </p>
+                        <div className="flex items-center gap-3">
+                            {defaultsSaved && (
+                                <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                                    <CheckCircle2 size={13} />
+                                    Saved
+                                </span>
+                            )}
+                            <Button
+                                onClick={handleSaveDefaults}
+                                disabled={connectedLanguageModels.length === 0}
+                            >
+                                Save Defaults
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </Card>
+            ) : null}
 
+            {activeSettingsSection === 'data' ? (
             <Card padding="none" className="p-8 border-[var(--color-error)]/20">
                 <div className="flex items-start gap-5 mb-6">
                     <div className="w-12 h-12 rounded-2xl bg-[rgba(196,92,62,0.12)] flex items-center justify-center text-[var(--color-error)] flex-shrink-0">
@@ -294,6 +443,7 @@ function SettingsView() {
                     Clear All Data
                 </Button>
             </Card>
+            ) : null}
         </div>
     )
 }

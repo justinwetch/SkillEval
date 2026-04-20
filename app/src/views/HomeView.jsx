@@ -86,6 +86,11 @@ function HomeView() {
                             View on GitHub
                         </Button>
                     </a>
+                    <Link to="/v2/evaluate">
+                        <Button variant="ghost" size="lg">
+                            Try V2 Workspace
+                        </Button>
+                    </Link>
                 </div>
             </section>
 

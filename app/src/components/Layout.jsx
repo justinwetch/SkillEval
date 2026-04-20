@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { Settings, FlaskConical, Sliders, Sun, Moon } from 'lucide-react'
+import { Settings, FlaskConical, Sliders, Sun, Moon, Sparkles } from 'lucide-react'
 import { useSettings } from '../contexts/SettingsContext'
 import { useLlmHub } from '../contexts/LlmHubContext'
 import ConnectionWarning from './ConnectionWarning'
@@ -12,7 +12,6 @@ function Layout() {
     const navItems = [
         { path: '/configure', label: 'Configure', icon: Sliders },
         { path: '/evaluate', label: 'Evaluate', icon: FlaskConical },
-        { path: '/settings', label: 'Settings', icon: Settings },
     ]
 
     return (
@@ -54,14 +53,35 @@ function Layout() {
                         })}
                     </nav>
 
-                    {/* Theme Toggle - Positioned Right */}
-                    <button
-                        onClick={toggleTheme}
-                        className="absolute right-8 w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-elevated)] transition-all"
-                        aria-label={`Switch to ${settings.theme === 'dark' ? 'light' : 'dark'} mode`}
-                    >
-                        {settings.theme === 'dark' ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}
-                    </button>
+                    <div className="absolute right-8 flex items-center gap-2">
+                        <NavLink
+                            to="/v2/evaluate"
+                            className="h-9 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] px-3 text-sm font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-primary)] transition-all flex items-center gap-2"
+                        >
+                            <Sparkles size={14} strokeWidth={1.8} />
+                            V2
+                        </NavLink>
+                        <NavLink
+                            to="/settings"
+                            className={({ isActive }) => `
+                                w-9 h-9 rounded-lg flex items-center justify-center border transition-all
+                                ${isActive
+                                    ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                                    : 'bg-[var(--color-bg-tertiary)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-elevated)]'
+                                }
+                            `}
+                            aria-label="Open settings"
+                        >
+                            <Settings size={18} strokeWidth={1.5} />
+                        </NavLink>
+                        <button
+                            onClick={toggleTheme}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-elevated)] transition-all"
+                            aria-label={`Switch to ${settings.theme === 'dark' ? 'light' : 'dark'} mode`}
+                        >
+                            {settings.theme === 'dark' ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}
+                        </button>
+                    </div>
                 </div>
             </header>
 

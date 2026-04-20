@@ -1,5 +1,5 @@
-const HTML_FENCE_RE = /```(?:html)?\s*([\s\S]*?)```/i
-const ANY_FENCE_RE = /```\w*\s*([\s\S]*?)```/i
+const HTML_FENCE_RE = /```(?:html)?\s*([\s\S]*?)(?:```|$)/i
+const ANY_FENCE_RE = /```\w*\s*([\s\S]*?)(?:```|$)/i
 const HTML_TAG_RE = /<(html|body|style|main|section|article|header|footer|nav|form|button|div|span|input|label|ul|ol|li|h[1-6]|p)\b/i
 const FRAMEWORK_RE = /\b(import\s+|export\s+default|from\s+['"]react|type\s+\w+\s*=|interface\s+\w+|function\s+\w+\s*\([^)]*\)\s*{)/i
 
