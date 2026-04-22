@@ -12,17 +12,17 @@ function HomeView() {
         {
             icon: Sparkles,
             title: 'AI-Powered Generation',
-            description: 'Generate prompts and judge criteria automatically based on your skill domain',
+            description: 'Generate prompts and judging criteria automatically from your uploaded skill set',
         },
         {
             icon: FileText,
             title: 'Any Skill, Any Domain',
-            description: 'Compare frontend, backend, writing, analysis, or any custom skill files',
+            description: 'Benchmark frontend, backend, writing, analysis, or any custom skill files',
         },
         {
             icon: BarChart3,
             title: 'Detailed Scoring',
-            description: 'Get breakdowns by criteria, see which skill wins and why',
+            description: 'See leaderboards, challenger matchups, and criterion-level scoring details',
         },
     ]
 
@@ -36,13 +36,13 @@ function HomeView() {
         {
             step: 2,
             title: 'Evaluate',
-            description: 'Run prompts through both skills, judge the outputs',
+            description: 'Run prompts through the baseline and challengers, then score the outputs',
             link: '/evaluate',
         },
         {
             step: 3,
             title: 'Analyze',
-            description: 'Review scores, breakdowns, and determine the winner',
+            description: 'Review rankings, breakdowns, and determine which skills perform best',
             link: '/evaluate',
         },
     ]
@@ -52,13 +52,13 @@ function HomeView() {
             {/* Hero Section */}
             <section className="text-center pt-8 pb-20">
                 <h1 className="text-5xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-6 leading-tight">
-                    A/B Test Your AI Skills
+                    Benchmark Your AI Skills
                 </h1>
                 <p
                     className="text-lg text-[var(--color-text-secondary)] leading-relaxed text-center"
                     style={{ maxWidth: '580px', margin: '0 auto 40px auto' }}
                 >
-                    Compare two skill.md files side-by-side. Run the same prompts against both, let an AI judge score the outputs, and see which skill performs better.
+                    Compare up to five skill files in one benchmark set. Run the same prompts against a baseline and multiple challengers, let an AI judge score the outputs, and see how they rank.
                 </p>
                 <div className="flex justify-center gap-4">
                     {needsProviderConnection ? (

@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node ./scripts/start-dev.mjs",
+    "dev:vite": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "llm-hub": "node ./scripts/start-llm-hub-server.mjs",

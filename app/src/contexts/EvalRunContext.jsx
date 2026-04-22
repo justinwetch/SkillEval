@@ -4,8 +4,8 @@
  * Manages state for active evaluation runs (generation, judging, results)
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { createEvaluation, runAllEvals } from '../utils/runEval';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { runAllEvals } from '../utils/runEval';
 import { judgeAllEvals } from '../utils/judgeEval';
 import {
     createRunHistory,
@@ -17,6 +17,13 @@ import {
 import { useSettings } from './SettingsContext';
 import { useEvalConfig } from './EvalConfigContext';
 import { useLlmHub } from './LlmHubContext';
+import {
+    createEvaluation,
+    getBaselineSkill,
+    getChallengerSkills,
+    getConfiguredSkills,
+    normalizeEvaluation,
+} from '../utils/evaluationModel';
 
 const EvalRunContext = createContext(null);
 
@@ -61,6 +68,17 @@ export function EvalRunProvider({ children }) {
     const [activeRunName, setActiveRunName] = useState('');
     const stopRequestedRef = useRef(false);
     const activeRunIdRef = useRef(activeRunId);
+    const activeSkills = useMemo(() => getConfiguredSkills(config), [config]);
+    const baselineSkill = useMemo(() => getBaselineSkill(activeSkills), [activeSkills]);
+    const challengerSkills = useMemo(() => getChallengerSkills(activeSkills), [activeSkills]);
+    const normalizedEvaluations = useMemo(() => (
+        evaluations.map((evaluation, index) => normalizeEvaluation(
+            evaluation,
+            config.prompts[index] ?? evaluation?.prompt,
+            index,
+            activeSkills,
+        ))
+    ), [activeSkills, config.prompts, evaluations]);
 
     const refreshRunHistory = useCallback(async () => {
         try {
@@ -85,7 +103,7 @@ export function EvalRunProvider({ children }) {
             })
             .catch((error) => {
                 if (!cancelled) {
-                    setHistoryError(error.message);
+                    console.warn('Run history bootstrap unavailable:', error);
                 }
             });
         return () => {
@@ -152,11 +170,11 @@ export function EvalRunProvider({ children }) {
 
     // Initialize evaluations from prompts
     const initializeEvaluations = useCallback(() => {
-        const evals = config.prompts.map(createEvaluation);
+        const evals = config.prompts.map((prompt, index) => createEvaluation(prompt, index, activeSkills));
         setEvaluations(evals);
         persistEvaluations(evals);
         return evals;
-    }, [config.prompts, persistEvaluations]);
+    }, [activeSkills, config.prompts, persistEvaluations]);
 
     const hasMatchingPrompts = useCallback((evals) => (
         evals.length === config.prompts.length &&
@@ -164,9 +182,12 @@ export function EvalRunProvider({ children }) {
     ), [config.prompts]);
 
     const startNewRun = useCallback(async () => {
-        const evals = config.prompts.map(createEvaluation);
+        const evals = config.prompts.map((prompt, index) => createEvaluation(prompt, index, activeSkills));
         const timestamp = Date.now();
-        const name = `${config.skillA.filename || 'Skill A'} vs ${config.skillB.filename || 'Skill B'} - ${new Date(timestamp).toLocaleString()}`;
+        const baselineLabel = baselineSkill?.filename || 'Baseline';
+        const name = challengerSkills.length <= 1
+            ? `${baselineLabel} vs ${challengerSkills[0]?.filename || 'Challenger'} - ${new Date(timestamp).toLocaleString()}`
+            : `${baselineLabel} vs ${challengerSkills.length} challengers - ${new Date(timestamp).toLocaleString()}`;
         const progressState = { current: 0, total: 0, phase: '' };
 
         setEvaluations(evals);
@@ -189,15 +210,22 @@ export function EvalRunProvider({ children }) {
         });
         await saveRunSnapshot(payload, name);
         return true;
-    }, [buildRunPayload, config.prompts, config.skillA.filename, config.skillB.filename, persistEvaluations, saveRunSnapshot, setActiveRun]);
+    }, [activeSkills, baselineSkill?.filename, buildRunPayload, challengerSkills, config.prompts, persistEvaluations, saveRunSnapshot, setActiveRun]);
 
     const loadRun = useCallback(async (id) => {
         try {
             const run = await loadRunHistory(id);
             const payload = run.payload || {};
             replaceConfig(payload.config || {});
-            setEvaluations(payload.evaluations || []);
-            persistEvaluations(payload.evaluations || []);
+            const loadedSkills = getConfiguredSkills(payload.config || {});
+            const loadedEvaluations = (payload.evaluations || []).map((evaluation, index) => normalizeEvaluation(
+                evaluation,
+                payload.config?.prompts?.[index] ?? evaluation?.prompt,
+                index,
+                loadedSkills,
+            ));
+            setEvaluations(loadedEvaluations);
+            persistEvaluations(loadedEvaluations);
             setRunStatus('idle');
             setProgress(payload.progress || { current: 0, total: 0, phase: '' });
             setRunError(null);
@@ -243,8 +271,8 @@ export function EvalRunProvider({ children }) {
         setStartTime(Date.now());
         setEndTime(null);
 
-        const startingEvaluations = hasScopedRun && hasMatchingPrompts(evaluations)
-            ? evaluations
+        const startingEvaluations = hasScopedRun && hasMatchingPrompts(normalizedEvaluations)
+            ? normalizedEvaluations
             : initializeEvaluations();
         const startedAt = Date.now();
         const initialProgress = { current: 0, total: 0, phase: 'generating' };
@@ -261,8 +289,7 @@ export function EvalRunProvider({ children }) {
             const results = await runAllEvals({
                 adapter,
                 modelSelection,
-                skillA: config.skillA,
-                skillB: config.skillB,
+                skills: activeSkills,
                 prompts: config.prompts,
                 evaluations: startingEvaluations,
                 promptIndexes: options.promptIndexes,
@@ -297,15 +324,17 @@ export function EvalRunProvider({ children }) {
                     finishedAt,
                 }), activeRunName);
             } else {
-                const completedSides = results.reduce((count, ev) => (
-                    count +
-                    (['complete', 'error'].includes(ev.resultA?.status) ? 1 : 0) +
-                    (['complete', 'error'].includes(ev.resultB?.status) ? 1 : 0)
+                const completedSides = results.reduce((count, evaluation) => (
+                    count + activeSkills.reduce((skillCount, skill) => (
+                        skillCount + (
+                            ['complete', 'error'].includes(evaluation.resultsBySkillId?.[skill.id]?.status) ? 1 : 0
+                        )
+                    ), 0)
                 ), 0);
                 await saveRunSnapshot(buildRunPayload({
                     evals: results,
                     status: 'idle',
-                    progressState: { current: completedSides, total: results.length * 2, phase: 'generated' },
+                    progressState: { current: completedSides, total: results.length * activeSkills.length, phase: 'generated' },
                     startedAt,
                     finishedAt,
                 }), activeRunName);
@@ -325,7 +354,7 @@ export function EvalRunProvider({ children }) {
             }), activeRunName);
             return false;
         }
-    }, [adapter, settings, config, connectedProviders.length, fallbackModelSelection, initializeEvaluations, persistEvaluations, evaluations, hasMatchingPrompts, buildRunPayload, saveRunSnapshot, activeRunName, autosaveRunSnapshot, progress]);
+    }, [activeSkills, adapter, settings, config, connectedProviders.length, fallbackModelSelection, initializeEvaluations, persistEvaluations, normalizedEvaluations, hasMatchingPrompts, buildRunPayload, saveRunSnapshot, activeRunName, autosaveRunSnapshot, progress]);
 
     // Run all judgments
     const runJudgments = useCallback(async (judgeModel, options = {}) => {
@@ -339,14 +368,23 @@ export function EvalRunProvider({ children }) {
         setRunError(null);
         stopRequestedRef.current = false;
         const startedAt = startTime || Date.now();
-        const judgmentRemainingCount = evaluations.filter(e =>
-            e.resultA.status === 'complete' &&
-            e.resultB.status === 'complete' &&
-            e.judge.status !== 'complete'
-        ).length;
+        const selectedChallengerIds = options.challengerSkillIds?.length ? new Set(options.challengerSkillIds) : null;
+        const judgmentRemainingCount = normalizedEvaluations.reduce((count, evaluation) => (
+            count + challengerSkills.filter((challenger) => {
+                if (selectedChallengerIds && !selectedChallengerIds.has(challenger.id)) {
+                    return false;
+                }
+                const baselineResult = evaluation.resultsBySkillId?.[baselineSkill?.id];
+                const challengerResult = evaluation.resultsBySkillId?.[challenger.id];
+                const comparison = evaluation.comparisons?.[challenger.id];
+                return baselineResult?.status === 'complete'
+                    && challengerResult?.status === 'complete'
+                    && comparison?.judge?.status !== 'complete';
+            }).length
+        ), 0);
         const initialProgress = { current: 0, total: judgmentRemainingCount, phase: 'judging' };
         await saveRunSnapshot(buildRunPayload({
-            evals: evaluations,
+            evals: normalizedEvaluations,
             status: 'judging',
             progressState: initialProgress,
             startedAt,
@@ -356,18 +394,16 @@ export function EvalRunProvider({ children }) {
             const results = await judgeAllEvals({
                 adapter,
                 modelSelection: judgeSelection,
-                evaluations: [...evaluations],
+                evaluations: [...normalizedEvaluations],
                 criteria: config.criteria,
                 outputType: config.outputType,
-                skillNames: {
-                    skillA: config.skillA.filename || 'Skill A',
-                    skillB: config.skillB.filename || 'Skill B'
-                },
+                skills: activeSkills,
                 evaluationIds: options.evaluationIds,
+                challengerSkillIds: options.challengerSkillIds,
                 onProgress: (p) => {
                     setProgress(p);
                     autosaveRunSnapshot(buildRunPayload({
-                        evals: evaluations,
+                        evals: normalizedEvaluations,
                         status: 'judging',
                         progressState: p,
                         startedAt,
@@ -393,11 +429,15 @@ export function EvalRunProvider({ children }) {
                     finishedAt,
                 }), activeRunName);
             } else {
-                const judgedCount = results.filter(e => e.judge.status === 'complete').length;
+                const judgedCount = results.reduce((count, evaluation) => (
+                    count + challengerSkills.filter((challenger) => (
+                        evaluation.comparisons?.[challenger.id]?.judge?.status === 'complete'
+                    )).length
+                ), 0);
                 await saveRunSnapshot(buildRunPayload({
                     evals: results,
                     status: 'idle',
-                    progressState: { current: judgedCount, total: results.length, phase: 'judged' },
+                    progressState: { current: judgedCount, total: results.length * challengerSkills.length, phase: 'judged' },
                     startedAt,
                     finishedAt,
                 }), activeRunName);
@@ -407,7 +447,7 @@ export function EvalRunProvider({ children }) {
             setRunError(error.message);
             setRunStatus('idle');
             await saveRunSnapshot(buildRunPayload({
-                evals: evaluations,
+                evals: normalizedEvaluations,
                 status: 'error',
                 progressState: { ...progress, phase: 'error' },
                 startedAt,
@@ -415,7 +455,7 @@ export function EvalRunProvider({ children }) {
             }), activeRunName);
             return false;
         }
-    }, [adapter, settings, config, connectedProviders.length, fallbackModelSelection, evaluations, persistEvaluations, saveRunSnapshot, buildRunPayload, activeRunName, startTime, autosaveRunSnapshot, progress]);
+    }, [activeSkills, adapter, baselineSkill?.id, challengerSkills, settings, config, connectedProviders.length, fallbackModelSelection, normalizedEvaluations, persistEvaluations, saveRunSnapshot, buildRunPayload, activeRunName, startTime, autosaveRunSnapshot, progress]);
 
     const requestStop = useCallback(() => {
         stopRequestedRef.current = true;
@@ -437,26 +477,48 @@ export function EvalRunProvider({ children }) {
 
     // Computed stats
     const stats = {
-        totalEvals: evaluations.length,
-        generatedCount: evaluations.filter(e =>
-            e.resultA.status === 'complete' && e.resultB.status === 'complete'
-        ).length,
-        judgedCount: evaluations.filter(e => e.judge.status === 'complete').length,
-        aWins: evaluations.filter(e => e.judge.scores?.winner === 'A').length,
-        bWins: evaluations.filter(e => e.judge.scores?.winner === 'B').length,
-        generationRemainingCount: evaluations.filter(e =>
-            e.resultA.status !== 'complete' || e.resultB.status !== 'complete'
-        ).length,
-        judgmentRemainingCount: evaluations.filter(e =>
-            e.resultA.status === 'complete' &&
-            e.resultB.status === 'complete' &&
-            e.judge.status !== 'complete'
-        ).length,
-        canJudge: evaluations.some(e =>
-            e.resultA.status === 'complete' &&
-            e.resultB.status === 'complete' &&
-            e.judge.status !== 'complete'
-        )
+        totalEvals: normalizedEvaluations.length,
+        generatedCount: normalizedEvaluations.filter((evaluation) => (
+            activeSkills.every((skill) => ['complete', 'error'].includes(evaluation.resultsBySkillId?.[skill.id]?.status))
+        )).length,
+        judgedCount: normalizedEvaluations.reduce((count, evaluation) => (
+            count + challengerSkills.filter((challenger) => (
+                evaluation.comparisons?.[challenger.id]?.judge?.status === 'complete'
+            )).length
+        ), 0),
+        aWins: challengerSkills[0]
+            ? normalizedEvaluations.filter((evaluation) => (
+                evaluation.comparisons?.[challengerSkills[0].id]?.judge?.scores?.winner === 'A'
+            )).length
+            : 0,
+        bWins: challengerSkills[0]
+            ? normalizedEvaluations.filter((evaluation) => (
+                evaluation.comparisons?.[challengerSkills[0].id]?.judge?.scores?.winner === 'B'
+            )).length
+            : 0,
+        generationRemainingCount: normalizedEvaluations.filter((evaluation) => (
+            activeSkills.some((skill) => evaluation.resultsBySkillId?.[skill.id]?.status !== 'complete')
+        )).length,
+        judgmentRemainingCount: normalizedEvaluations.reduce((count, evaluation) => (
+            count + challengerSkills.filter((challenger) => {
+                const baselineResult = evaluation.resultsBySkillId?.[baselineSkill?.id];
+                const challengerResult = evaluation.resultsBySkillId?.[challenger.id];
+                const comparison = evaluation.comparisons?.[challenger.id];
+                return baselineResult?.status === 'complete'
+                    && challengerResult?.status === 'complete'
+                    && comparison?.judge?.status !== 'complete';
+            }).length
+        ), 0),
+        canJudge: normalizedEvaluations.some((evaluation) => (
+            challengerSkills.some((challenger) => {
+                const baselineResult = evaluation.resultsBySkillId?.[baselineSkill?.id];
+                const challengerResult = evaluation.resultsBySkillId?.[challenger.id];
+                const comparison = evaluation.comparisons?.[challenger.id];
+                return baselineResult?.status === 'complete'
+                    && challengerResult?.status === 'complete'
+                    && comparison?.judge?.status !== 'complete';
+            })
+        )),
     };
 
     return (

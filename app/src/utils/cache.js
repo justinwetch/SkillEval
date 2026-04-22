@@ -6,14 +6,25 @@
 const CACHE_PREFIX = 'skill_eval_config_';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+function normalizeHashSkills(skillsOrSkillA, maybeSkillB) {
+    if (Array.isArray(skillsOrSkillA)) {
+        return skillsOrSkillA.filter((skill) => skill?.content)
+    }
+
+    return [skillsOrSkillA, maybeSkillB].filter((skill) => skill?.content)
+}
+
 /**
  * Generate a SHA-256 hash of skill contents for cache key
- * @param {Object} skillA - { filename, content }
- * @param {Object} skillB - { filename, content }
+ * @param {Object[]|Object} skillsOrSkillA - Array of skills, or legacy skillA
+ * @param {Object} maybeSkillB - Legacy skillB
  * @returns {Promise<string>} Hash string
  */
-export async function getSkillHash(skillA, skillB) {
-    const combined = `${skillA.content}|||${skillB.content}`;
+export async function getSkillHash(skillsOrSkillA, maybeSkillB) {
+    const skills = normalizeHashSkills(skillsOrSkillA, maybeSkillB)
+    const combined = skills
+        .map((skill, index) => `${skill.filename || `skill-${index + 1}`}|||${skill.content}`)
+        .join('\n=====SKILL_BOUNDARY=====\n')
     const encoder = new TextEncoder();
     const data = encoder.encode(combined);
 

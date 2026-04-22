@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
     AlertCircle,
@@ -31,6 +31,13 @@ import { useEvalConfig } from '../contexts/EvalConfigContext'
 import { useEvalRun } from '../contexts/EvalRunContext'
 import { checkServerHealth } from '../utils/screenshot'
 import { extractRenderableHtml } from '../utils/renderablePreview'
+import {
+    getBaselineSkill,
+    getChallengerSkills,
+    getConfiguredSkills,
+    getDisplayedEvaluation,
+    normalizeEvaluation,
+} from '../utils/evaluationModel'
 
 function ResultPanel({ title, filename, isWinner, winnerClassName, result, panelClassName = '' }) {
     const html = extractRenderableHtml(result?.content)
@@ -45,7 +52,7 @@ function ResultPanel({ title, filename, isWinner, winnerClassName, result, panel
                         <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
                             {title}
                         </h3>
-                        {isWinner && <Trophy size={14} className={winnerClassName} />}
+                        {isWinner && <Trophy size={18} className={winnerClassName} />}
                     </div>
                     {filename ? (
                         <div className="mt-0.5 truncate text-sm text-[var(--color-text-muted)]">
@@ -151,6 +158,7 @@ function EvaluateView({ variant = 'classic' }) {
     } = useEvalRun()
 
     const [activeTab, setActiveTab] = useState(isV2 ? 'individual' : 'run')
+    const [v2ResultsTab, setV2ResultsTab] = useState('summary')
     const [editingPromptIdx, setEditingPromptIdx] = useState(null)
     const [screenshotServerStatus, setScreenshotServerStatus] = useState(null)
     const [selectedRunId, setSelectedRunId] = useState('')
@@ -163,10 +171,29 @@ function EvaluateView({ variant = 'classic' }) {
     const [resultsViewMode, setResultsViewMode] = useState('all')
     const [selectedResultId, setSelectedResultId] = useState(1)
     const [clockMs, setClockMs] = useState(0)
+    const [selectedChallengerId, setSelectedChallengerId] = useState('')
     const [collapsedJudgeIds, setCollapsedJudgeIds] = useState(() => (
         isV2 ? new Set(config.prompts.map((_, idx) => idx + 1)) : new Set()
     ))
     const [collapsedBreakdownCards, setCollapsedBreakdownCards] = useState(new Set())
+    const activeSkills = useMemo(() => getConfiguredSkills(config), [config])
+    const baselineSkill = useMemo(() => getBaselineSkill(activeSkills), [activeSkills])
+    const challengerSkills = useMemo(() => getChallengerSkills(activeSkills), [activeSkills])
+    const activeChallengerId = challengerSkills.some((skill) => skill.id === selectedChallengerId)
+        ? selectedChallengerId
+        : challengerSkills[0]?.id || ''
+    const currentChallengerSkill = challengerSkills.find((skill) => skill.id === activeChallengerId) || challengerSkills[0] || null
+    const pairLabelA = baselineSkill?.filename || config.skillA?.filename || 'Baseline'
+    const pairLabelB = currentChallengerSkill?.filename || config.skillB?.filename || 'Challenger'
+    const pairedEvaluations = useMemo(() => (
+        evaluations.map((evaluation, index) => getDisplayedEvaluation(
+            evaluation,
+            activeSkills,
+            currentChallengerSkill?.id,
+            config.prompts[index] ?? evaluation?.prompt,
+            index,
+        ))
+    ), [activeSkills, config.prompts, currentChallengerSkill?.id, evaluations])
 
     const needsProviderConnection = connectedProviders.length === 0
 
@@ -176,13 +203,43 @@ function EvaluateView({ variant = 'classic' }) {
         }
     }, [config.outputType])
 
+    const confirmTextOnlyJudging = async () => {
+        const needsScreenshots = config.outputType === 'visual' || config.outputType === 'both'
+
+        if (!needsScreenshots) {
+            return true
+        }
+
+        const latestStatus = await checkServerHealth()
+        setScreenshotServerStatus(latestStatus)
+
+        if (latestStatus.available) {
+            return true
+        }
+
+        return window.confirm(
+            'Screenshot server unavailable. Continue with text-only evaluation?'
+        )
+    }
+
+    const startJudging = async (options = undefined) => {
+        const shouldContinue = await confirmTextOnlyJudging()
+
+        if (!shouldContinue) {
+            return
+        }
+
+        runJudgments(activeJudgeModel, options)
+    }
+
     useEffect(() => {
-        if (activeTab !== 'results' || !highlightedResultId) return
+        const resultsTabId = isV2 ? 'individual' : 'results'
+        if (activeTab !== resultsTabId || !highlightedResultId) return
         const element = document.getElementById(`result-card-${highlightedResultId}`)
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
-    }, [activeTab, highlightedResultId])
+    }, [activeTab, highlightedResultId, isV2])
 
     useEffect(() => {
         if (!startTime || endTime) return undefined
@@ -209,17 +266,17 @@ function EvaluateView({ variant = 'classic' }) {
     const exportAsJSON = () => {
         const exportData = {
             exportedAt: new Date().toISOString(),
-            skillA: config.skillA.filename,
-            skillB: config.skillB.filename,
+            baselineSkill: pairLabelA,
+            challengerSkill: pairLabelB,
             criteria: config.criteria,
             summary: {
-                total: stats.totalEvals,
-                judged: stats.judgedCount,
-                aWins: stats.aWins,
-                bWins: stats.bWins,
-                ties: stats.judgedCount - stats.aWins - stats.bWins,
+                total: pairedEvaluations.length,
+                judged: pairedEvaluations.filter((evaluation) => evaluation.judge?.status === 'complete').length,
+                aWins: pairedEvaluations.filter((evaluation) => evaluation.judge?.scores?.winner === 'A').length,
+                bWins: pairedEvaluations.filter((evaluation) => evaluation.judge?.scores?.winner === 'B').length,
+                ties: pairedEvaluations.filter((evaluation) => evaluation.judge?.status === 'complete' && evaluation.judge?.scores?.winner === 'tie').length,
             },
-            evaluations: evaluations.map((ev) => ({
+            evaluations: pairedEvaluations.map((ev) => ({
                 id: ev.id,
                 prompt: ev.prompt,
                 resultA: { content: ev.resultA.content, elapsed: ev.resultA.elapsed },
@@ -243,8 +300,8 @@ function EvaluateView({ variant = 'classic' }) {
     }
 
     const exportAsCSV = () => {
-        const headers = ['ID', 'Prompt', 'Winner', 'Score A', 'Score B', ...config.criteria.map((c) => `${c.name} (A)`), ...config.criteria.map((c) => `${c.name} (B)`)]
-        const rows = evaluations.map((ev) => {
+        const headers = ['ID', 'Prompt', 'Winner', `${pairLabelA} Score`, `${pairLabelB} Score`, ...config.criteria.map((c) => `${c.name} (${pairLabelA})`), ...config.criteria.map((c) => `${c.name} (${pairLabelB})`)]
+        const rows = pairedEvaluations.map((ev) => {
             const scores = ev.judge.scores
             const criteriaScoresA = config.criteria.map((c) => scores?.breakdown?.[c.id]?.A || '')
             const criteriaScoresB = config.criteria.map((c) => scores?.breakdown?.[c.id]?.B || '')
@@ -281,9 +338,198 @@ function EvaluateView({ variant = 'classic' }) {
     const safeSelectedResultId = Math.min(Math.max(selectedResultId, 1), Math.max(maxPromptId, 1))
     const settingsPath = isV2 ? '/v2/settings' : '/settings'
     const isBreakdownCardCollapsed = (cardId) => collapsedBreakdownCards.has(cardId)
+    const comparisonStats = {
+        totalEvals: pairedEvaluations.length,
+        generatedCount: pairedEvaluations.filter((evaluation) => (
+            evaluation.resultA?.status === 'complete' && evaluation.resultB?.status === 'complete'
+        )).length,
+        judgedCount: pairedEvaluations.filter((evaluation) => evaluation.judge?.status === 'complete').length,
+        readyToJudgeCount: pairedEvaluations.filter((evaluation) => (
+            evaluation.resultA?.status === 'complete'
+            && evaluation.resultB?.status === 'complete'
+            && evaluation.judge?.status !== 'complete'
+        )).length,
+        aWins: pairedEvaluations.filter((evaluation) => evaluation.judge?.scores?.winner === 'A').length,
+        bWins: pairedEvaluations.filter((evaluation) => evaluation.judge?.scores?.winner === 'B').length,
+        canJudge: pairedEvaluations.some((evaluation) => (
+            evaluation.resultA?.status === 'complete'
+            && evaluation.resultB?.status === 'complete'
+            && evaluation.judge?.status !== 'complete'
+        )),
+    }
+    const normalizedEvaluations = useMemo(() => (
+        evaluations.map((evaluation, index) => normalizeEvaluation(
+            evaluation,
+            config.prompts[index] ?? evaluation?.prompt,
+            index,
+            activeSkills,
+        ))
+    ), [activeSkills, config.prompts, evaluations])
+    const skillRows = useMemo(() => (
+        activeSkills.map((skill, index) => ({
+            id: skill.id,
+            name: skill.filename || `Skill ${index + 1}`,
+            role: index === 0 ? 'Baseline' : 'Challenger',
+        }))
+    ), [activeSkills])
+    const judgedComparisons = useMemo(() => {
+        if (!baselineSkill) return []
+        return normalizedEvaluations.flatMap((evaluation) => (
+            challengerSkills.flatMap((challenger) => {
+                const comparison = evaluation.comparisons?.[challenger.id]
+                if (!comparison?.judge?.scores) return []
+                return [{
+                    evaluationId: evaluation.id,
+                    prompt: evaluation.prompt,
+                    challengerId: challenger.id,
+                    challengerName: challenger.filename || challenger.id,
+                    winner: comparison.judge.scores.winner,
+                    scoreA: comparison.judge.scores.scoreA || 0,
+                    scoreB: comparison.judge.scores.scoreB || 0,
+                    breakdown: comparison.judge.scores.breakdown || {},
+                }]
+            })
+        ))
+    }, [baselineSkill, challengerSkills, normalizedEvaluations])
+    const leaderboardRows = useMemo(() => {
+        const rowMap = new Map(skillRows.map((row) => [row.id, {
+            ...row,
+            wins: 0,
+            losses: 0,
+            ties: 0,
+            judged: 0,
+            totalScore: 0,
+        }]))
+
+        judgedComparisons.forEach((comparison) => {
+            const baselineRow = rowMap.get(baselineSkill?.id)
+            const challengerRow = rowMap.get(comparison.challengerId)
+            if (!baselineRow || !challengerRow) return
+
+            baselineRow.judged += 1
+            baselineRow.totalScore += comparison.scoreA
+            challengerRow.judged += 1
+            challengerRow.totalScore += comparison.scoreB
+
+            if (comparison.winner === 'A') {
+                baselineRow.wins += 1
+                challengerRow.losses += 1
+            } else if (comparison.winner === 'B') {
+                challengerRow.wins += 1
+                baselineRow.losses += 1
+            } else {
+                baselineRow.ties += 1
+                challengerRow.ties += 1
+            }
+        })
+
+        return [...rowMap.values()]
+            .map((row) => ({
+                ...row,
+                avgScore: row.judged ? row.totalScore / row.judged : null,
+                winRate: row.judged ? row.wins / row.judged : 0,
+            }))
+            .sort((left, right) => (
+                (right.winRate - left.winRate)
+                || ((right.avgScore || 0) - (left.avgScore || 0))
+                || (right.wins - left.wins)
+                || left.name.localeCompare(right.name)
+            ))
+    }, [baselineSkill?.id, judgedComparisons, skillRows])
+    const challengerSummaryRows = useMemo(() => (
+        challengerSkills.map((challenger) => {
+            const rows = judgedComparisons.filter((comparison) => comparison.challengerId === challenger.id)
+            const baselineWins = rows.filter((comparison) => comparison.winner === 'A').length
+            const challengerWins = rows.filter((comparison) => comparison.winner === 'B').length
+            const ties = rows.filter((comparison) => comparison.winner === 'tie').length
+            const avgBaseline = rows.length
+                ? rows.reduce((total, comparison) => total + comparison.scoreA, 0) / rows.length
+                : null
+            const avgChallenger = rows.length
+                ? rows.reduce((total, comparison) => total + comparison.scoreB, 0) / rows.length
+                : null
+
+            return {
+                id: challenger.id,
+                name: challenger.filename || challenger.id,
+                judged: rows.length,
+                baselineWins,
+                challengerWins,
+                ties,
+                avgBaseline,
+                avgChallenger,
+                leader: baselineWins > challengerWins ? pairLabelA : challengerWins > baselineWins ? (challenger.filename || challenger.id) : 'Tie',
+            }
+        })
+    ), [challengerSkills, judgedComparisons, pairLabelA])
+    const criterionMatrixRows = useMemo(() => {
+        const rowMap = new Map(skillRows.map((row) => [row.id, {
+            ...row,
+            judged: 0,
+            totalScore: 0,
+            criterionTotals: Object.fromEntries(config.criteria.map((criterion) => [criterion.id, 0])),
+            criterionCounts: Object.fromEntries(config.criteria.map((criterion) => [criterion.id, 0])),
+        }]))
+
+        judgedComparisons.forEach((comparison) => {
+            const baselineRow = rowMap.get(baselineSkill?.id)
+            const challengerRow = rowMap.get(comparison.challengerId)
+            if (!baselineRow || !challengerRow) return
+
+            baselineRow.judged += 1
+            baselineRow.totalScore += comparison.scoreA
+            challengerRow.judged += 1
+            challengerRow.totalScore += comparison.scoreB
+
+            config.criteria.forEach((criterion) => {
+                const criterionScores = comparison.breakdown?.[criterion.id]
+                if (!criterionScores) return
+                baselineRow.criterionTotals[criterion.id] += criterionScores.A || 0
+                baselineRow.criterionCounts[criterion.id] += 1
+                challengerRow.criterionTotals[criterion.id] += criterionScores.B || 0
+                challengerRow.criterionCounts[criterion.id] += 1
+            })
+        })
+
+        return [...rowMap.values()]
+            .map((row) => ({
+                ...row,
+                avgScore: row.judged ? row.totalScore / row.judged : null,
+                criteria: Object.fromEntries(config.criteria.map((criterion) => [
+                    criterion.id,
+                    row.criterionCounts[criterion.id]
+                        ? row.criterionTotals[criterion.id] / row.criterionCounts[criterion.id]
+                        : null,
+                ])),
+            }))
+            .sort((left, right) => (
+                ((right.avgScore || 0) - (left.avgScore || 0))
+                || left.name.localeCompare(right.name)
+            ))
+    }, [baselineSkill?.id, config.criteria, judgedComparisons, skillRows])
+    const criterionLeaderRows = useMemo(() => (
+        config.criteria.map((criterion) => {
+            const rankedSkills = criterionMatrixRows
+                .map((row) => ({
+                    skillName: row.name,
+                    avg: row.criteria[criterion.id],
+                }))
+                .filter((row) => row.avg !== null)
+                .sort((left, right) => right.avg - left.avg)
+
+            return {
+                id: criterion.id,
+                name: criterion.name,
+                leaderName: rankedSkills[0]?.skillName || '—',
+                leaderAvg: rankedSkills[0]?.avg ?? null,
+                runnerUpName: rankedSkills[1]?.skillName || '—',
+                runnerUpAvg: rankedSkills[1]?.avg ?? null,
+            }
+        })
+    ), [config.criteria, criterionMatrixRows])
 
     const getPromptStatus = (idx) => {
-        const ev = evaluations[idx]
+        const ev = pairedEvaluations[idx]
         return {
             a: ev?.resultA?.status || 'pending',
             b: ev?.resultB?.status || 'pending',
@@ -352,16 +598,16 @@ function EvaluateView({ variant = 'classic' }) {
     const visibleJudgeRows = judgePromptRows.filter(filterJudgeRow)
     const runSelectedIndexes = [...safeRunSelection].map((id) => id - 1)
     const hasSelectedPrompts = safeRunSelection.size > 0
-    const hasRunResults = evaluations.some((ev) => (
+    const hasRunResults = pairedEvaluations.some((ev) => (
         ['running', 'complete', 'error'].includes(ev?.resultA?.status)
         || ['running', 'complete', 'error'].includes(ev?.resultB?.status)
     ))
     const runSelectedRemaining = runSelectedIndexes.filter((idx) => {
-        const ev = evaluations[idx]
+        const ev = pairedEvaluations[idx]
         return !ev || ev.resultA?.status !== 'complete' || ev.resultB?.status !== 'complete'
     }).length
     const judgeSelectedIds = [...safeJudgeSelection].filter((id) => {
-        const ev = evaluations[id - 1]
+        const ev = pairedEvaluations[id - 1]
         return ev && ev.resultA?.status === 'complete' && ev.resultB?.status === 'complete' && ev.judge?.status !== 'complete'
     })
 
@@ -377,8 +623,8 @@ function EvaluateView({ variant = 'classic' }) {
         return 'Idle'
     }
 
-    const allPromptsSelected = evaluations.length > 0 && safeRunSelection.size === evaluations.length
-    const allResultsExpanded = evaluations.length > 0 && safeExpandedResultIds.size === evaluations.length
+    const allPromptsSelected = pairedEvaluations.length > 0 && safeRunSelection.size === pairedEvaluations.length
+    const allResultsExpanded = pairedEvaluations.length > 0 && safeExpandedResultIds.size === pairedEvaluations.length
     const hasResumeAction = evaluations.length > 0 && stats.generationRemainingCount > 0
     const showStopAction = ['generating', 'judging'].includes(runStatus)
     const toolbarPrimaryAction = (() => {
@@ -440,7 +686,7 @@ function EvaluateView({ variant = 'classic' }) {
         }
         return {
             key: 'complete',
-            label: stats.judgedCount > 0 ? 'Judged' : 'Run Complete',
+            label: comparisonStats.judgedCount > 0 ? 'Judged' : 'Run Complete',
             icon: CheckCircle2,
             action: undefined,
             disabled: true,
@@ -614,7 +860,7 @@ function EvaluateView({ variant = 'classic' }) {
         return (
             <span className="inline-flex items-center gap-1 rounded border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]">
                 <Clock size={12} />
-                Waiting for A/B generation
+                Waiting for pair generation
             </span>
         )
     }
@@ -713,15 +959,15 @@ function EvaluateView({ variant = 'classic' }) {
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                                 <ResultPanel
-                                    title="Result A"
-                                    filename={config.skillA.filename || 'Skill A'}
+                                    title="Baseline"
+                                    filename={pairLabelA}
                                     isWinner={winner === 'A'}
-                                    winnerClassName="text-blue-500"
+                                    winnerClassName="text-green-600"
                                     result={ev.resultA}
                                 />
                                 <ResultPanel
-                                    title="Result B"
-                                    filename={config.skillB.filename || 'Skill B'}
+                                    title="Challenger"
+                                    filename={pairLabelB}
                                     isWinner={winner === 'B'}
                                     winnerClassName="text-orange-500"
                                     result={ev.resultB}
@@ -761,57 +1007,82 @@ function EvaluateView({ variant = 'classic' }) {
         const status = getPromptStatus(ev.id - 1)
         const maxScore = config.criteria.length * 5
         const selected = safeRunSelection.has(ev.id)
+        const collapsedWinnerBadge = winner ? (
+            <Badge
+                size="sm"
+                className={winner === 'A'
+                    ? 'h-4.5 bg-green-500/12 px-1.5 py-0 text-[10px] leading-4 text-green-600'
+                    : 'h-4.5 bg-blue-500/12 px-1.5 py-0 text-[10px] leading-4 text-blue-600'}
+            >
+                {`Winner ${winner}`}
+            </Badge>
+        ) : ev.judge?.status === 'complete' ? (
+            <Badge size="sm" variant="default" className="h-4.5 px-1.5 py-0 text-[10px] leading-4">Tie</Badge>
+        ) : null
+        const headerToggleClassName = 'rounded-sm border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-0 text-[var(--color-text-muted)]'
+        const handleExpandedBodyClick = (event) => {
+            const interactiveTarget = event.target.closest('button, input, select, textarea, a, iframe, label')
+            if (interactiveTarget) {
+                return
+            }
+            toggleResultExpanded(ev.id)
+        }
 
         return (
             <Card
                 key={ev.id}
                 id={`result-card-${ev.id}`}
-                className={`${highlightedResultId === ev.id ? 'border-[var(--color-accent)]' : ''} overflow-hidden p-0`}
+                className={`${highlightedResultId === ev.id ? 'border-[var(--color-accent)]' : ''} ${expanded ? 'rounded-xl' : 'rounded-md'} overflow-hidden p-0`}
             >
-                <div className="flex items-start gap-3 px-5 py-4">
-                    <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => toggleSelection(setRunSelection, ev.id)}
-                        aria-label={`Select eval ${ev.id}`}
-                        className="mt-1"
-                    />
-                    <button
-                        type="button"
-                        onClick={() => toggleResultExpanded(ev.id)}
-                        className="flex min-w-0 flex-1 items-start justify-between gap-4 text-left"
-                    >
-                        <div className="min-w-0">
-                            <div className="flex min-w-0 flex-wrap items-start gap-3">
-                                <div className="flex shrink-0 items-center gap-2 pt-1">
-                                    <Badge>{`Eval ${ev.id}`}</Badge>
-                                    {selected ? <Badge variant="default">Selected</Badge> : null}
-                                </div>
-                                <div className="min-w-0 flex-1 text-lg leading-8">
-                                    {renderPromptWithEmphasis(ev.prompt)}
+                <div className="px-2.5 py-0.5">
+                    <div className="flex min-h-[38px] items-center gap-2">
+                        {hasRunResults ? (
+                            <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleSelection(setRunSelection, ev.id)}
+                                aria-label={`Select eval ${ev.id}`}
+                                className="h-3 w-3 shrink-0"
+                            />
+                        ) : null}
+                        <Badge size="sm" className="shrink-0">
+                            {`Eval ${ev.id}`}
+                        </Badge>
+                        <button
+                            type="button"
+                            onClick={() => toggleResultExpanded(ev.id)}
+                            className="flex min-w-0 flex-1 items-center justify-between gap-1.5 text-left"
+                        >
+                            <div className={`min-w-0 flex-1 text-lg leading-8 text-[var(--color-text-primary)] ${expanded ? 'whitespace-normal break-words' : 'truncate'}`}>
+                                {renderPromptWithEmphasis(ev.prompt)}
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
+                                {collapsedWinnerBadge}
+                                <div className={headerToggleClassName}>
+                                    {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                                 </div>
                             </div>
-                        </div>
-                        <div className="shrink-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2 text-[var(--color-text-muted)]">
-                            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </div>
-                    </button>
+                        </button>
+                    </div>
                 </div>
 
                 {expanded ? (
-                    <div className="space-y-5 border-t border-[var(--color-border)] px-5 py-5">
+                    <div
+                        className="space-y-5 border-t border-[var(--color-border)] px-5 py-5"
+                        onClick={handleExpandedBodyClick}
+                    >
                         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                             <ResultPanel
-                                title="Result A"
-                                filename={config.skillA.filename || 'Skill A'}
+                                title="Baseline"
+                                filename={pairLabelA}
                                 isWinner={winner === 'A'}
-                                winnerClassName="text-blue-500"
+                                winnerClassName="text-green-600"
                                 result={ev.resultA}
                                 panelClassName={winner === 'A' ? 'rounded-2xl border border-blue-500/35 bg-blue-500/5 p-3 shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_18px_48px_rgba(59,130,246,0.16)]' : 'rounded-2xl border border-[var(--color-border)]/70 p-3'}
                             />
                             <ResultPanel
-                                title="Result B"
-                                filename={config.skillB.filename || 'Skill B'}
+                                title="Challenger"
+                                filename={pairLabelB}
                                 isWinner={winner === 'B'}
                                 winnerClassName="text-orange-500"
                                 result={ev.resultB}
@@ -841,9 +1112,9 @@ function EvaluateView({ variant = 'classic' }) {
                             {!judgeCollapsed ? (
                                 <div className="space-y-4 border-t border-[var(--color-border)] px-4 py-4">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-xs text-[var(--color-text-muted)]">Model A</span>
+                                        <span className="text-xs text-[var(--color-text-muted)]">{pairLabelA}</span>
                                         {renderStatusBadge(status.a, status.aTime)}
-                                        <span className="ml-2 text-xs text-[var(--color-text-muted)]">Model B</span>
+                                        <span className="ml-2 text-xs text-[var(--color-text-muted)]">{pairLabelB}</span>
                                         {renderStatusBadge(status.b, status.bTime)}
                                         <span className="ml-2 text-xs text-[var(--color-text-muted)]">Judge</span>
                                         {renderJudgeBadge({
@@ -858,8 +1129,8 @@ function EvaluateView({ variant = 'classic' }) {
                                                 <thead>
                                                     <tr className="border-b border-[var(--color-border)] text-[var(--color-text-muted)]">
                                                         <th className="px-3 py-2 text-left font-medium">Criterion</th>
-                                                        <th className="px-3 py-2 text-center font-medium">Result A</th>
-                                                        <th className="px-3 py-2 text-center font-medium">Result B</th>
+                                                        <th className="px-3 py-2 text-center font-medium">{pairLabelA}</th>
+                                                        <th className="px-3 py-2 text-center font-medium">{pairLabelB}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -933,7 +1204,7 @@ function EvaluateView({ variant = 'classic' }) {
     }
 
     return (
-        <div className="animate-fade-in">
+        <div className={isV2 ? 'mx-auto max-w-[1320px]' : 'animate-fade-in'}>
             {isV2 ? null : (
                 <>
                     <div className="mb-6">
@@ -941,7 +1212,7 @@ function EvaluateView({ variant = 'classic' }) {
                             Evaluate
                         </h1>
                         <p className="text-[var(--color-text-secondary)]">
-                            Run {config.prompts.length} prompts through both skills and judge the results
+                            Run {config.prompts.length} prompts through your baseline and challengers, then judge the results
                         </p>
                     </div>
 
@@ -996,7 +1267,7 @@ function EvaluateView({ variant = 'classic' }) {
                                 Screenshot server not running
                             </p>
                             <p className="mb-2 text-xs text-[var(--color-text-secondary)]">
-                                Visual judging requires the screenshot server. Run: <code className="rounded bg-[var(--color-bg-tertiary)] px-1">node screenshot-server.js</code>
+                                Screenshot server unavailable. Continue with text-only evaluation, or run <code className="rounded bg-[var(--color-bg-tertiary)] px-1">node screenshot-server.js</code> to enable rendered screenshots.
                             </p>
                             <Button variant="ghost" size="sm" onClick={() => checkServerHealth().then(setScreenshotServerStatus)}>
                                 <RefreshCw size={12} />
@@ -1037,7 +1308,7 @@ function EvaluateView({ variant = 'classic' }) {
                                 </Badge>
                             </div>
                             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                                {stats.generatedCount}/{config.prompts.length} generated, {stats.judgedCount}/{config.prompts.length} judged
+                                {comparisonStats.generatedCount}/{config.prompts.length} generated, {comparisonStats.judgedCount}/{config.prompts.length} judged
                                 {startTime ? ` • ${formatTime(elapsedTime)} elapsed` : ''}
                             </p>
                             {isStopping ? (
@@ -1055,7 +1326,7 @@ function EvaluateView({ variant = 'classic' }) {
                                     {formatModelLabel(activeGenerationModel)}
                                 </div>
                                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                                    Controlled from Settings and used when running prompts through both skills.
+                                    Controlled from Settings and used when generating outputs for the current skill set.
                                 </p>
                             </div>
                             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] px-4 py-3">
@@ -1066,7 +1337,7 @@ function EvaluateView({ variant = 'classic' }) {
                                     {formatModelLabel(activeJudgeModel)}
                                 </div>
                                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                                    Controlled from Settings and used when scoring A versus B.
+                                    Controlled from Settings and used when scoring the current baseline-versus-challenger view.
                                 </p>
                             </div>
                         </div>
@@ -1095,7 +1366,7 @@ function EvaluateView({ variant = 'classic' }) {
                         </Button>
                         <Button
                             variant="secondary"
-                            onClick={() => runJudgments(activeJudgeModel)}
+                            onClick={() => startJudging()}
                             disabled={isBusy || !stats.canJudge}
                         >
                             {runStatus === 'judging' ? (
@@ -1132,30 +1403,79 @@ function EvaluateView({ variant = 'classic' }) {
 
             <div className={isV2 ? 'space-y-4' : ''}>
                 {!isV2 ? (
-                    <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--color-border)]">
-                        <TabButton active={activeTab === 'run'} onClick={() => setActiveTab('run')}>
-                            Run
-                        </TabButton>
-                        <TabButton active={activeTab === 'judge'} onClick={() => setActiveTab('judge')}>
-                            Judge
-                        </TabButton>
-                        <TabButton active={activeTab === 'results'} onClick={() => setActiveTab('results')}>
-                            Results
-                        </TabButton>
-                        <TabButton active={activeTab === 'summary'} onClick={() => setActiveTab('summary')}>
-                            Summary
-                        </TabButton>
-                        <TabButton active={activeTab === 'breakdown'} onClick={() => setActiveTab('breakdown')}>
-                            Breakdown
-                        </TabButton>
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)]">
+                        <div className="flex gap-1 overflow-x-auto">
+                            <TabButton active={activeTab === 'run'} onClick={() => setActiveTab('run')}>
+                                Run
+                            </TabButton>
+                            <TabButton active={activeTab === 'judge'} onClick={() => setActiveTab('judge')}>
+                                Judge
+                            </TabButton>
+                            <TabButton active={activeTab === 'results'} onClick={() => setActiveTab('results')}>
+                                Results
+                            </TabButton>
+                            <TabButton active={activeTab === 'summary'} onClick={() => setActiveTab('summary')}>
+                                Summary
+                            </TabButton>
+                            <TabButton active={activeTab === 'breakdown'} onClick={() => setActiveTab('breakdown')}>
+                                Breakdown
+                            </TabButton>
+                        </div>
+                        {challengerSkills.length > 1 ? (
+                            <label className="mb-2 flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                                <span>Compare Against</span>
+                                <select
+                                    value={currentChallengerSkill?.id || ''}
+                                    onChange={(event) => setSelectedChallengerId(event.target.value)}
+                                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+                                >
+                                    {challengerSkills.map((skill) => (
+                                        <option key={skill.id} value={skill.id}>
+                                            {skill.filename || skill.id}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        ) : null}
                     </div>
                 ) : null}
 
                 <div className={isV2 ? 'space-y-4' : ''}>
                     {isV2 ? (
                         <>
-                            <div className="space-y-2">
-                                <div className="flex flex-wrap items-center justify-end gap-2">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-1">
+                                    {[
+                                        ['individual', 'Individual Analysis'],
+                                        ['results', 'Results'],
+                                    ].map(([id, label]) => (
+                                        <button
+                                            key={id}
+                                            type="button"
+                                            onClick={() => setActiveTab(id)}
+                                            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === id ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-sm' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {challengerSkills.length > 1 ? (
+                                        <label className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                                            <span>Compare Against</span>
+                                            <select
+                                                value={currentChallengerSkill?.id || ''}
+                                                onChange={(event) => setSelectedChallengerId(event.target.value)}
+                                                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+                                            >
+                                                {challengerSkills.map((skill) => (
+                                                    <option key={skill.id} value={skill.id}>
+                                                        {skill.filename || skill.id}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    ) : null}
                                     <Button
                                         size="sm"
                                         className="min-w-[132px]"
@@ -1179,64 +1499,66 @@ function EvaluateView({ variant = 'classic' }) {
                                         </Button>
                                     ) : null}
                                 </div>
-                                {(isStopping || runError) ? (
-                                    <div className="space-y-1 text-right">
+                            </div>
+                            {(isStopping || runError || (activeTab === 'individual' && hasRunResults) || (!isBusy && toolbarPrimaryAction.key === 'complete' && !hasSelectedPrompts)) ? (
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="min-h-[24px] text-sm">
                                         {isStopping ? (
-                                            <p className="text-sm text-[var(--color-warning)]">
+                                            <p className="text-[var(--color-warning)]">
                                                 Current batch will finish, then execution stops.
                                             </p>
+                                        ) : runError ? (
+                                            <p className="text-[var(--color-error)]">{runError}</p>
+                                        ) : !isBusy && toolbarPrimaryAction.key === 'complete' && !hasSelectedPrompts ? (
+                                            <p className="text-[var(--color-text-muted)]">
+                                                Select prompts in Individual Analysis to enable re-run.
+                                            </p>
                                         ) : null}
-                                        {runError ? <p className="text-sm text-[var(--color-error)]">{runError}</p> : null}
                                     </div>
-                                ) : null}
-                                {!isBusy && toolbarPrimaryAction.key === 'complete' && !hasSelectedPrompts ? (
-                                    <div className="text-right text-sm text-[var(--color-text-muted)]">
-                                        Select prompts in Individual Analysis to enable re-run.
-                                    </div>
-                                ) : null}
-                            </div>
-
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-1">
-                                    {[
-                                        ['summary', 'Summary'],
-                                        ['breakdown', 'Breakdown'],
-                                        ['individual', 'Individual Analysis'],
-                                    ].map(([id, label]) => (
-                                        <button
-                                            key={id}
-                                            type="button"
-                                            onClick={() => setActiveTab(id)}
-                                            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === id ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-sm' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
-                                        >
-                                            {label}
-                                        </button>
-                                    ))}
+                                    {activeTab === 'individual' && hasRunResults ? (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-[var(--color-text-secondary)]">
+                                                {safeRunSelection.size} selected
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRunSelection(allPromptsSelected ? new Set() : new Set(pairedEvaluations.map((ev) => ev.id)))}
+                                                disabled={pairedEvaluations.length === 0}
+                                                className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                {allPromptsSelected ? 'Clear Selection' : 'Select All'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setExpandedResultIds(allResultsExpanded ? new Set() : new Set(pairedEvaluations.map((ev) => ev.id)))}
+                                                disabled={pairedEvaluations.length === 0}
+                                                className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                {allResultsExpanded ? 'Collapse All' : 'Expand All'}
+                                            </button>
+                                        </div>
+                                    ) : null}
                                 </div>
-                                {activeTab === 'individual' ? (
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm text-[var(--color-text-secondary)]">
-                                            {safeRunSelection.size} selected
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setRunSelection(allPromptsSelected ? new Set() : new Set(evaluations.map((ev) => ev.id)))}
-                                            disabled={evaluations.length === 0}
-                                            className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {allPromptsSelected ? 'Clear Selection' : 'Select All'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setExpandedResultIds(allResultsExpanded ? new Set() : new Set(evaluations.map((ev) => ev.id)))}
-                                            disabled={evaluations.length === 0}
-                                            className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {allResultsExpanded ? 'Collapse All' : 'Expand All'}
-                                        </button>
+                            ) : null}
+                            {activeTab === 'results' ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-1">
+                                        {[
+                                            ['summary', 'Summary'],
+                                            ['breakdown', 'Breakdown'],
+                                        ].map(([id, label]) => (
+                                            <button
+                                                key={id}
+                                                type="button"
+                                                onClick={() => setV2ResultsTab(id)}
+                                                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${v2ResultsTab === id ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-sm' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
                                     </div>
-                                ) : null}
-                            </div>
+                                </div>
+                            ) : null}
                         </>
                     ) : null}
 
@@ -1299,7 +1621,7 @@ function EvaluateView({ variant = 'classic' }) {
                         <div className="space-y-2.5">
                             {visibleRunRows.map((row) => {
                                 const selected = safeRunSelection.has(row.id)
-                                const ev = evaluations[row.id - 1]
+                                const ev = pairedEvaluations[row.id - 1]
                                 return (
                                     <Card key={row.id} className={`p-3.5 ${selected ? 'border-[var(--color-accent)]' : ''}`}>
                                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
@@ -1339,11 +1661,11 @@ function EvaluateView({ variant = 'classic' }) {
                                             </div>
                                             <div className="flex flex-col gap-1.5 lg:min-w-64">
                                                 <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
-                                                    <span className="text-[var(--color-text-muted)]">A:</span>
+                                                    <span className="text-[var(--color-text-muted)]">{pairLabelA}:</span>
                                                     {renderStatusBadge(row.status.a, row.status.aTime)}
                                                 </div>
                                                 <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
-                                                    <span className="text-[var(--color-text-muted)]">B:</span>
+                                                    <span className="text-[var(--color-text-muted)]">{pairLabelB}:</span>
                                                     {renderStatusBadge(row.status.b, row.status.bTime)}
                                                 </div>
                                                 <div className="flex flex-wrap justify-end gap-2 pt-1">
@@ -1385,7 +1707,7 @@ function EvaluateView({ variant = 'classic' }) {
                                 <div>
                                     <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Judge Queue</h2>
                                     <p className="text-sm text-[var(--color-text-secondary)]">
-                                        {safeJudgeSelection.size} selected • {stats.judgmentRemainingCount} ready to judge
+                                        {safeJudgeSelection.size} selected • {comparisonStats.readyToJudgeCount} ready to judge
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
@@ -1397,7 +1719,10 @@ function EvaluateView({ variant = 'classic' }) {
                                     </select>
                                     <Button
                                         variant="secondary"
-                                        onClick={() => runJudgments(activeJudgeModel, { evaluationIds: judgeSelectedIds })}
+                                        onClick={() => startJudging({
+                                            evaluationIds: judgeSelectedIds,
+                                            challengerSkillIds: currentChallengerSkill ? [currentChallengerSkill.id] : undefined,
+                                        })}
                                         disabled={isBusy || judgeSelectedIds.length === 0}
                                     >
                                         <Scale size={16} />
@@ -1405,8 +1730,10 @@ function EvaluateView({ variant = 'classic' }) {
                                     </Button>
                                     <Button
                                         variant="secondary"
-                                        onClick={() => runJudgments(activeJudgeModel)}
-                                        disabled={isBusy || !stats.canJudge}
+                                        onClick={() => startJudging({
+                                            challengerSkillIds: currentChallengerSkill ? [currentChallengerSkill.id] : undefined,
+                                        })}
+                                        disabled={isBusy || !comparisonStats.canJudge}
                                     >
                                         <RefreshCw size={16} />
                                         Resume Judging
@@ -1435,7 +1762,7 @@ function EvaluateView({ variant = 'classic' }) {
                         <div className="space-y-3">
                             {visibleJudgeRows.map((row) => {
                                 const selected = safeJudgeSelection.has(row.id)
-                                const ev = evaluations[row.id - 1]
+                                const ev = pairedEvaluations[row.id - 1]
                                 return (
                                     <Card key={row.id} className={`p-4 ${selected ? 'border-[var(--color-accent)]' : ''}`}>
                                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
@@ -1461,11 +1788,11 @@ function EvaluateView({ variant = 'classic' }) {
                                             </div>
                                             <div className="flex flex-col gap-2 lg:min-w-80">
                                                 <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
-                                                    <span className="text-[var(--color-text-muted)]">A:</span>
+                                                    <span className="text-[var(--color-text-muted)]">{pairLabelA}:</span>
                                                     {renderStatusBadge(row.status.a, row.status.aTime)}
                                                 </div>
                                                 <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
-                                                    <span className="text-[var(--color-text-muted)]">B:</span>
+                                                    <span className="text-[var(--color-text-muted)]">{pairLabelB}:</span>
                                                     {renderStatusBadge(row.status.b, row.status.bTime)}
                                                 </div>
                                                 <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
@@ -1476,7 +1803,10 @@ function EvaluateView({ variant = 'classic' }) {
                                                     <Button
                                                         size="sm"
                                                         variant="ghost"
-                                                        onClick={() => runJudgments(activeJudgeModel, { evaluationIds: [row.id] })}
+                                                        onClick={() => startJudging({
+                                                            evaluationIds: [row.id],
+                                                            challengerSkillIds: currentChallengerSkill ? [currentChallengerSkill.id] : undefined,
+                                                        })}
                                                         disabled={isBusy || !row.isReady}
                                                     >
                                                         Judge
@@ -1515,7 +1845,9 @@ function EvaluateView({ variant = 'classic' }) {
                         />
                     ) : (
                         isV2 ? (
-                            evaluations.map((ev) => renderV2IndividualCard(ev))
+                            <div className="space-y-1.5">
+                                {pairedEvaluations.map((ev) => renderV2IndividualCard(ev))}
+                            </div>
                         ) : (
                         <>
                             <Card className="p-4">
@@ -1556,7 +1888,7 @@ function EvaluateView({ variant = 'classic' }) {
                                                 }}
                                                 className="min-w-40"
                                             >
-                                                {evaluations.map((ev) => (
+                                                {pairedEvaluations.map((ev) => (
                                                     <option key={ev.id} value={ev.id}>
                                                         Eval {ev.id}
                                                     </option>
@@ -1569,11 +1901,11 @@ function EvaluateView({ variant = 'classic' }) {
 
                             {resultsViewMode === 'single'
                                 ? renderResultCard(
-                                    evaluations.find((ev) => ev.id === safeSelectedResultId) || evaluations[0],
+                                    pairedEvaluations.find((ev) => ev.id === safeSelectedResultId) || pairedEvaluations[0],
                                     true,
                                     true,
                                 )
-                                : evaluations.map((ev) => renderResultCard(ev, safeExpandedResultIds.has(ev.id)))
+                                : pairedEvaluations.map((ev) => renderResultCard(ev, safeExpandedResultIds.has(ev.id)))
                             }
                         </>
                         )
@@ -1581,90 +1913,99 @@ function EvaluateView({ variant = 'classic' }) {
                 </div>
             )}
 
-            {activeTab === 'summary' && (
+            {((!isV2 && activeTab === 'summary') || (isV2 && activeTab === 'results' && v2ResultsTab === 'summary')) && (
                 <div className="space-y-4">
-                    {stats.judgedCount === 0 ? (
+                    {judgedComparisons.length === 0 ? (
                         <EmptyState
                             title="No judged evaluations yet"
-                            description="Run judgments to unlock overall winner summaries and score comparisons."
+                            description="Run judgments to unlock the multi-skill leaderboard and challenger matchup summary."
                         />
                     ) : (
                         <>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                                <Card className={`p-4 text-center ${stats.aWins > stats.bWins ? 'bg-blue-500/10' : ''}`}>
-                                    <div className="text-3xl font-bold text-blue-500">{stats.aWins}</div>
-                                    <div className="text-xs text-[var(--color-text-muted)]">Skill A Wins</div>
-                                </Card>
-                                <Card className={`p-4 text-center ${stats.bWins > stats.aWins ? 'bg-orange-500/10' : ''}`}>
-                                    <div className="text-3xl font-bold text-orange-500">{stats.bWins}</div>
-                                    <div className="text-xs text-[var(--color-text-muted)]">Skill B Wins</div>
+                                <Card className="p-4 text-center">
+                                    <div className="text-3xl font-bold text-[var(--color-text-primary)]">{activeSkills.length}</div>
+                                    <div className="text-xs text-[var(--color-text-muted)]">Skills Compared</div>
                                 </Card>
                                 <Card className="p-4 text-center">
-                                    <div className="text-3xl font-bold text-[var(--color-text-primary)]">{stats.judgedCount - stats.aWins - stats.bWins}</div>
-                                    <div className="text-xs text-[var(--color-text-muted)]">Ties</div>
+                                    <div className="text-3xl font-bold text-[var(--color-text-primary)]">{judgedComparisons.length}</div>
+                                    <div className="text-xs text-[var(--color-text-muted)]">Judged Matchups</div>
                                 </Card>
                                 <Card className="p-4 text-center">
-                                    <div className="text-3xl font-bold text-[var(--color-text-primary)]">{stats.judgedCount}</div>
-                                    <div className="text-xs text-[var(--color-text-muted)]">Judged Evals</div>
+                                    <div className="truncate text-lg font-semibold text-[var(--color-text-primary)]">{pairLabelA}</div>
+                                    <div className="text-xs text-[var(--color-text-muted)]">Baseline</div>
+                                </Card>
+                                <Card className="p-4 text-center">
+                                    <div className="truncate text-lg font-semibold text-[var(--color-text-primary)]">{leaderboardRows[0]?.name || '—'}</div>
+                                    <div className="text-xs text-[var(--color-text-muted)]">Top Ranked</div>
                                 </Card>
                             </div>
 
                             <Card className="p-6">
-                                <h2 className="mb-4 text-lg font-semibold text-[var(--color-text-primary)]">Evaluation Summary</h2>
+                                <h2 className="mb-4 text-lg font-semibold text-[var(--color-text-primary)]">Skill Leaderboard</h2>
                                 <div className="max-h-[28rem] overflow-auto">
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b border-[var(--color-border)]">
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Eval</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Prompt</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Skill A Score</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Skill B Score</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Winner</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Status</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Rank</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Skill</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Role</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Wins</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Losses</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Ties</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Win Rate</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Avg Score</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Judged</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {evaluations.map((ev) => {
-                                                const maxScore = config.criteria.length * 5
-                                                return (
-                                                    <tr
-                                                        key={ev.id}
-                                                        className="cursor-pointer border-b border-[var(--color-border)] hover:bg-[var(--color-bg-elevated)]"
-                                                        onClick={() => {
-                                                            setSelectedResultId(ev.id)
-                                                            showResultCard(ev.id)
-                                                            if (!isV2) {
-                                                                setResultsViewMode('single')
-                                                            }
-                                                        }}
-                                                    >
-                                                        <td className="px-3 py-3 text-[var(--color-text-muted)]">{ev.id}</td>
-                                                        <td className="max-w-xs truncate px-3 py-3 text-[var(--color-text-primary)]">{ev.prompt}</td>
-                                                        <td className={`px-3 py-3 text-center font-medium ${ev.judge.scores?.winner === 'A' ? 'bg-blue-500/10 text-blue-600' : ''}`}>
-                                                            {ev.judge.scores?.scoreA ? `${ev.judge.scores.scoreA}/${maxScore}` : '-'}
-                                                        </td>
-                                                        <td className={`px-3 py-3 text-center font-medium ${ev.judge.scores?.winner === 'B' ? 'bg-orange-500/10 text-orange-600' : ''}`}>
-                                                            {ev.judge.scores?.scoreB ? `${ev.judge.scores.scoreB}/${maxScore}` : '-'}
-                                                        </td>
-                                                        <td className="px-3 py-3 text-center">
-                                                            {ev.judge.scores?.winner ? (
-                                                                <span className={`font-bold ${ev.judge.scores.winner === 'A' ? 'text-blue-500' : ev.judge.scores.winner === 'B' ? 'text-orange-500' : 'text-[var(--color-text-muted)]'}`}>
-                                                                    {ev.judge.scores.winner}
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-[var(--color-text-muted)]">-</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-3 py-3 text-center text-[var(--color-text-muted)]">
-                                                            {ev.judge.status === 'complete'
-                                                                ? 'Judged'
-                                                                : ev.resultA.status === 'complete' && ev.resultB.status === 'complete'
-                                                                    ? 'Ready'
-                                                                    : 'Pending'}
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            })}
+                                            {leaderboardRows.map((row, index) => (
+                                                <tr key={row.id} className="border-b border-[var(--color-border)]">
+                                                    <td className="px-3 py-3 text-[var(--color-text-muted)]">{index + 1}</td>
+                                                    <td className="max-w-xs truncate px-3 py-3 font-medium text-[var(--color-text-primary)]">{row.name}</td>
+                                                    <td className="px-3 py-3 text-[var(--color-text-secondary)]">{row.role}</td>
+                                                    <td className="px-3 py-3 text-center font-medium text-green-600">{row.wins}</td>
+                                                    <td className="px-3 py-3 text-center font-medium text-[var(--color-error)]">{row.losses}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.ties}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.judged ? `${Math.round(row.winRate * 100)}%` : '—'}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.avgScore !== null ? `${row.avgScore.toFixed(1)}/${config.criteria.length * 5}` : '—'}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.judged}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
+
+                            <Card className="p-6">
+                                <h2 className="mb-4 text-lg font-semibold text-[var(--color-text-primary)]">Challenger Matchups</h2>
+                                <div className="max-h-[24rem] overflow-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-[var(--color-border)]">
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Challenger</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Judged</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">{pairLabelA} Wins</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Challenger Wins</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Ties</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">{pairLabelA} Avg</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Challenger Avg</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Leader</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {challengerSummaryRows.map((row) => (
+                                                <tr key={row.id} className="border-b border-[var(--color-border)]">
+                                                    <td className="max-w-xs truncate px-3 py-3 font-medium text-[var(--color-text-primary)]">{row.name}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.judged}</td>
+                                                    <td className="px-3 py-3 text-center font-medium text-blue-600">{row.baselineWins}</td>
+                                                    <td className="px-3 py-3 text-center font-medium text-orange-600">{row.challengerWins}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.ties}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.avgBaseline !== null ? row.avgBaseline.toFixed(1) : '—'}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.avgChallenger !== null ? row.avgChallenger.toFixed(1) : '—'}</td>
+                                                    <td className="px-3 py-3 text-center font-medium text-[var(--color-text-primary)]">{row.leader}</td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -1674,81 +2015,99 @@ function EvaluateView({ variant = 'classic' }) {
                 </div>
             )}
 
-            {activeTab === 'breakdown' && (
+            {((!isV2 && activeTab === 'breakdown') || (isV2 && activeTab === 'results' && v2ResultsTab === 'breakdown')) && (
                 <div className="space-y-4">
-                    {stats.judgedCount === 0 ? (
+                    {judgedComparisons.length === 0 ? (
                         <EmptyState
                             title="No judged evaluations yet"
-                            description="Run judgments to inspect per-criterion scoring breakdowns."
+                            description="Run judgments to inspect multi-skill criterion trends and current-pair score details."
                         />
                     ) : (
                         <>
                             <Card className="p-6">
                                 <button
                                     type="button"
-                                    onClick={() => isV2 && toggleBreakdownCard('criterion-summary')}
+                                    onClick={() => isV2 && toggleBreakdownCard('criterion-matrix')}
                                     className={`mb-4 flex w-full items-center justify-between gap-3 text-left ${isV2 ? '' : 'cursor-default'}`}
                                 >
-                                    <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Per-Criterion Summary</h2>
+                                    <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Skill Criterion Matrix</h2>
                                     {isV2 ? (
                                         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2 text-[var(--color-text-muted)]">
-                                            {isBreakdownCardCollapsed('criterion-summary') ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                                            {isBreakdownCardCollapsed('criterion-matrix') ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                                         </div>
                                     ) : null}
                                 </button>
-                                {!isV2 || !isBreakdownCardCollapsed('criterion-summary') ? (
+                                {!isV2 || !isBreakdownCardCollapsed('criterion-matrix') ? (
+                                <div className="max-h-[24rem] overflow-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-[var(--color-border)]">
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Skill</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Role</th>
+                                                {config.criteria.map((criterion) => (
+                                                    <th key={criterion.id} className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">
+                                                        {criterion.name}
+                                                    </th>
+                                                ))}
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Overall Avg</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Judged</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {criterionMatrixRows.map((row) => (
+                                                <tr key={row.id} className="border-b border-[var(--color-border)]">
+                                                    <td className="max-w-xs truncate px-3 py-3 font-medium text-[var(--color-text-primary)]">{row.name}</td>
+                                                    <td className="px-3 py-3 text-[var(--color-text-secondary)]">{row.role}</td>
+                                                    {config.criteria.map((criterion) => (
+                                                        <td key={criterion.id} className="px-3 py-3 text-center text-[var(--color-text-secondary)]">
+                                                            {row.criteria[criterion.id] !== null ? row.criteria[criterion.id].toFixed(1) : '—'}
+                                                        </td>
+                                                    ))}
+                                                    <td className="px-3 py-3 text-center font-medium text-[var(--color-text-primary)]">{row.avgScore !== null ? row.avgScore.toFixed(1) : '—'}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.judged}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                ) : null}
+                            </Card>
+
+                            <Card className="p-6">
+                                <button
+                                    type="button"
+                                    onClick={() => isV2 && toggleBreakdownCard('criterion-leaders')}
+                                    className={`mb-4 flex w-full items-center justify-between gap-3 text-left ${isV2 ? '' : 'cursor-default'}`}
+                                >
+                                    <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Criterion Leaders</h2>
+                                    {isV2 ? (
+                                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2 text-[var(--color-text-muted)]">
+                                            {isBreakdownCardCollapsed('criterion-leaders') ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                                        </div>
+                                    ) : null}
+                                </button>
+                                {!isV2 || !isBreakdownCardCollapsed('criterion-leaders') ? (
                                 <div className="max-h-[24rem] overflow-auto">
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b border-[var(--color-border)]">
                                                 <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Criterion</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Skill A Wins</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Skill B Wins</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Ties</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Avg Score A</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Avg Score B</th>
-                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Leader</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Leader</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Leader Avg</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-left font-medium text-[var(--color-text-muted)]">Runner-Up</th>
+                                                <th className="sticky top-0 bg-[var(--color-bg-secondary)] px-3 py-2 text-center font-medium text-[var(--color-text-muted)]">Runner-Up Avg</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {config.criteria.map((criterion) => {
-                                                let aWins = 0
-                                                let bWins = 0
-                                                let ties = 0
-                                                let aTotal = 0
-                                                let bTotal = 0
-                                                let count = 0
-
-                                                evaluations.forEach((ev) => {
-                                                    const breakdown = ev.judge.scores?.breakdown?.[criterion.id]
-                                                    if (breakdown) {
-                                                        count += 1
-                                                        aTotal += breakdown.A || 0
-                                                        bTotal += breakdown.B || 0
-                                                        if ((breakdown.A || 0) > (breakdown.B || 0)) aWins += 1
-                                                        else if ((breakdown.B || 0) > (breakdown.A || 0)) bWins += 1
-                                                        else ties += 1
-                                                    }
-                                                })
-
-                                                const avgA = count > 0 ? (aTotal / count).toFixed(1) : '-'
-                                                const avgB = count > 0 ? (bTotal / count).toFixed(1) : '-'
-                                                const leader = aWins > bWins ? 'A' : bWins > aWins ? 'B' : '-'
-
-                                                return (
-                                                    <tr key={criterion.id} className="border-b border-[var(--color-border)]">
-                                                        <td className="px-3 py-3 text-[var(--color-text-primary)]">{criterion.name}</td>
-                                                        <td className="px-3 py-3 text-center font-medium text-blue-500">{aWins}</td>
-                                                        <td className="px-3 py-3 text-center font-medium text-orange-500">{bWins}</td>
-                                                        <td className="px-3 py-3 text-center text-[var(--color-text-muted)]">{ties}</td>
-                                                        <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{avgA}/5</td>
-                                                        <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{avgB}/5</td>
-                                                        <td className={`px-3 py-3 text-center font-bold ${leader === 'A' ? 'text-blue-500' : leader === 'B' ? 'text-orange-500' : ''}`}>
-                                                            {leader}
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            })}
+                                            {criterionLeaderRows.map((row) => (
+                                                <tr key={row.id} className="border-b border-[var(--color-border)]">
+                                                    <td className="px-3 py-3 text-[var(--color-text-primary)]">{row.name}</td>
+                                                    <td className="max-w-xs truncate px-3 py-3 font-medium text-[var(--color-text-primary)]">{row.leaderName}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.leaderAvg !== null ? row.leaderAvg.toFixed(1) : '—'}</td>
+                                                    <td className="max-w-xs truncate px-3 py-3 text-[var(--color-text-secondary)]">{row.runnerUpName}</td>
+                                                    <td className="px-3 py-3 text-center text-[var(--color-text-secondary)]">{row.runnerUpAvg !== null ? row.runnerUpAvg.toFixed(1) : '—'}</td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -1761,7 +2120,12 @@ function EvaluateView({ variant = 'classic' }) {
                                     onClick={() => isV2 && toggleBreakdownCard('score-details')}
                                     className={`mb-4 flex w-full items-center justify-between gap-3 text-left ${isV2 ? '' : 'cursor-default'}`}
                                 >
-                                    <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Score Details Per Evaluation</h2>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Current Pair Score Details</h2>
+                                        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                                            Showing {pairLabelA} vs {pairLabelB}
+                                        </p>
+                                    </div>
                                     {isV2 ? (
                                         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2 text-[var(--color-text-muted)]">
                                             {isBreakdownCardCollapsed('score-details') ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
@@ -1784,7 +2148,7 @@ function EvaluateView({ variant = 'classic' }) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {evaluations.filter((ev) => ev.judge.scores).map((ev) => {
+                                            {pairedEvaluations.filter((ev) => ev.judge.scores).map((ev) => {
                                                 const scores = ev.judge.scores
                                                 const maxScore = config.criteria.length * 5
                                                 return (
@@ -1833,11 +2197,11 @@ function EvaluateView({ variant = 'classic' }) {
             </div>
 
             <div className="mt-6 flex justify-end gap-2 border-t border-[var(--color-border)] pt-6">
-                <Button variant="secondary" onClick={exportAsCSV} disabled={evaluations.length === 0}>
+                <Button variant="secondary" onClick={exportAsCSV} disabled={pairedEvaluations.length === 0}>
                     <Download size={16} />
                     Export CSV
                 </Button>
-                <Button variant="secondary" onClick={exportAsJSON} disabled={evaluations.length === 0}>
+                <Button variant="secondary" onClick={exportAsJSON} disabled={pairedEvaluations.length === 0}>
                     <Download size={16} />
                     Export JSON
                 </Button>

@@ -1,15 +1,16 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { FlaskConical, History, Layers3, Moon, Settings, Sliders, Sparkles, Sun } from 'lucide-react'
 import { useSettings } from '../contexts/SettingsContext'
 import { useLlmHub } from '../contexts/LlmHubContext'
 
 function LayoutV2() {
+    const location = useLocation()
     const { settings, toggleTheme } = useSettings()
     const { connectedProviders } = useLlmHub()
 
     const navItems = [
         { path: '/v2/configure', label: 'Configure', icon: Sliders, description: 'Prepare skills and prompts' },
-        { path: '/v2/evaluate', label: 'Evaluate', icon: FlaskConical, description: 'Run and judge evaluations' },
+        { path: '/v2/evaluate', label: 'Evaluate', icon: FlaskConical, description: 'Run baseline vs challenger evaluations' },
         { path: '/v2/history', label: 'History', icon: History, description: 'Saved runs and reloads' },
     ]
 
@@ -99,7 +100,9 @@ function LayoutV2() {
 
                     <main className="min-h-0 flex-1 overflow-y-auto">
                         <div className="mx-auto max-w-7xl px-5 py-5 lg:px-8">
-                            <Outlet />
+                            <div key={location.pathname} className="animate-page-expand-in">
+                                <Outlet />
+                            </div>
                         </div>
                     </main>
                 </div>

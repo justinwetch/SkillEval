@@ -9,13 +9,13 @@ import { getSkillHash, getCachedConfig, setCachedConfig } from './cache';
 
 const SYSTEM_PROMPT = `You are a configuration generator for an AI skill evaluation tool.
 
-Given two skill files that will be compared against each other, analyze them and generate appropriate evaluation configuration.
+Given multiple skill files that will be benchmarked in the same evaluation, analyze them and generate one shared evaluation configuration.
 
 Your task is to understand:
 1. What domain/task the skills are designed for
 2. What kind of output the skills will produce
-3. What criteria would fairly evaluate their outputs
-4. What prompts would effectively test their capabilities
+3. What criteria would fairly evaluate all of their outputs
+4. What prompts would effectively test their overlapping and differentiating capabilities
 
 ## Output Type Inference
 
@@ -27,7 +27,7 @@ Analyze the skill to determine output type:
 ## Criteria Generation Guidelines
 
 Generate 4-6 criteria that:
-- Are specific to what these skills claim to do
+- Are specific to what this skill set claims to do
 - Can be objectively evaluated (not vague)
 - Cover different aspects (correctness, quality, style, edge cases)
 - Each have a clear 1-5 scoring rubric
@@ -35,9 +35,9 @@ Generate 4-6 criteria that:
 ## Prompt Generation Guidelines
 
 Generate the requested number of prompts that:
-- Actually test what the skills claim to do
+- Actually test what the full skill set claims to do
 - Vary in difficulty (roughly 20% easy, 60% medium, 20% hard)
-- Cover different aspects mentioned in the skills
+- Cover different aspects mentioned across the skills
 - Are realistic user requests, not artificial tests
 - Include edge cases and challenging scenarios
 
@@ -220,8 +220,9 @@ function validateConfig(config) {
  * @param {Object} options
  * @param {Object} options.adapter - llm-hub UI adapter
  * @param {Object} options.modelSelection - { providerId, modelId }
- * @param {Object} options.skillA - { filename, content }
- * @param {Object} options.skillB - { filename, content }
+ * @param {Object[]} options.skills - [{ id, filename, content }]
+ * @param {Object} options.skillA - Legacy fallback { filename, content }
+ * @param {Object} options.skillB - Legacy fallback { filename, content }
  * @param {string} options.generationType - 'all' | 'criteria' | 'prompts' | 'outputType'
  * @param {number} options.promptCount - Number of prompts to generate (default 50)
  * @param {boolean} options.bypassCache - Force regeneration even if cached
@@ -231,20 +232,30 @@ function validateConfig(config) {
 export async function generateFromSkills({
     adapter,
     modelSelection,
+    skills,
     skillA,
     skillB,
+    comparisonMode = 'baseline',
     generationType = 'all',
     promptCount = 50,
     bypassCache = false,
     existingConfig = null
 }) {
-    if (!skillA?.content || !skillB?.content) {
-        throw new Error('Both skill files are required');
+    const configuredSkills = (
+        Array.isArray(skills) && skills.length > 0
+            ? skills
+            : [skillA, skillB]
+    )
+        .filter((skill) => skill?.content)
+        .slice(0, 5)
+
+    if (configuredSkills.length < 2) {
+        throw new Error('At least two skill files are required');
     }
 
     // Check cache first (only for 'all' generation type)
     if (generationType === 'all' && !bypassCache) {
-        const hash = await getSkillHash(skillA, skillB);
+        const hash = await getSkillHash(configuredSkills);
         const cached = getCachedConfig(hash);
         if (cached) {
             console.log('Using cached configuration');
@@ -253,28 +264,42 @@ export async function generateFromSkills({
     }
 
     // Build user message with skill contents
-    let userMessage = `Please analyze these two skill files and generate evaluation configuration.
-
-## Skill A: ${skillA.filename || 'skill-a.md'}
+    const skillSections = configuredSkills.map((skill, index) => {
+        const role = comparisonMode === 'pairwise'
+            ? index === 0
+                ? 'Skill A'
+                : index === 1
+                    ? 'Skill B'
+                    : `Additional Skill ${index + 1}`
+            : index === 0
+                ? 'Baseline Skill'
+                : `Challenger Skill ${index}`
+        return `## ${role}: ${skill.filename || `skill-${index + 1}.md`}
 
 \`\`\`
-${skillA.content}
-\`\`\`
+${skill.content}
+\`\`\``
+    }).join('\n\n')
 
-## Skill B: ${skillB.filename || 'skill-b.md'}
+    let userMessage = `Please analyze this benchmark set and generate evaluation configuration.
 
-\`\`\`
-${skillB.content}
-\`\`\`
+${comparisonMode === 'pairwise'
+        ? 'Treat the skills as neutral sides in a head-to-head comparison. Do not assume either skill is the standard or reference implementation.'
+        : 'The first skill is the baseline. Every additional skill will be compared against that baseline using the same criteria and prompt set.'
+    }
+
+${skillSections}
 
 `;
 
     // Add generation-specific instructions
     if (generationType === 'all') {
-        userMessage += `Generate a complete configuration with:
+        userMessage += `Generate a complete shared configuration with:
 - Output type (text/visual/both)
 - 4-6 evaluation criteria with rubrics
 - ${promptCount} test prompts
+
+The resulting configuration must work fairly for the full skill set, not just one pair.
 
 ${FEW_SHOT_EXAMPLE}`;
     } else if (generationType === 'criteria') {
@@ -320,7 +345,7 @@ Do not generate criteria or prompts, use empty arrays.`;
 
         // Cache the result (only for 'all' generation)
         if (generationType === 'all') {
-            const hash = await getSkillHash(skillA, skillB);
+            const hash = await getSkillHash(configuredSkills);
             setCachedConfig(hash, finalConfig);
         }
 

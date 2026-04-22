@@ -14,14 +14,50 @@ const EvalConfigContext = createContext(null);
 const STORAGE_KEY = 'skill_eval_current_config';
 
 const DEFAULT_CONFIG = {
+    skills: [],
     skillA: { filename: '', content: '' },
     skillB: { filename: '', content: '' },
+    comparisonMode: 'baseline',
     outputType: 'text',
     outputTypeReasoning: '',
     criteria: [],
     prompts: [],
-    promptCount: 50,
+    promptCount: 5,
 };
+
+function createEmptySkill() {
+    return { id: `skill_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, filename: '', content: '' };
+}
+
+export function normalizeSkills(config) {
+    const rawSkills = Array.isArray(config?.skills) ? config.skills : [];
+    const hasExplicitSkills = Array.isArray(config?.skills);
+    const migratedSkills = hasExplicitSkills
+        ? rawSkills
+        : [config?.skillA, config?.skillB].filter((skill) => skill?.content);
+
+    const skills = migratedSkills
+        .filter((skill) => skill && (skill.filename || skill.content))
+        .slice(0, 5)
+        .map((skill) => ({
+            id: skill.id || createEmptySkill().id,
+            filename: skill.filename || '',
+            content: skill.content || '',
+        }));
+
+    return skills;
+}
+
+export function syncLegacySkills(config) {
+    const skills = normalizeSkills(config);
+    return {
+        ...DEFAULT_CONFIG,
+        ...config,
+        skills,
+        skillA: skills[0] || { filename: '', content: '' },
+        skillB: skills[1] || { filename: '', content: '' },
+    };
+}
 
 export function EvalConfigProvider({ children }) {
     const { settings } = useSettings();
@@ -43,16 +79,17 @@ export function EvalConfigProvider({ children }) {
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
-                return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+                return syncLegacySkills(JSON.parse(saved));
             }
         } catch (e) {
             console.warn('Failed to load saved config:', e);
         }
-        return DEFAULT_CONFIG;
+        return syncLegacySkills(DEFAULT_CONFIG);
     });
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationError, setGenerationError] = useState(null);
+    const configuredSkills = normalizeSkills(config);
 
     // Persist config to localStorage
     const persistConfig = useCallback((newConfig) => {
@@ -66,23 +103,73 @@ export function EvalConfigProvider({ children }) {
     // Update a single config field
     const updateConfig = useCallback((field, value) => {
         setConfig(prev => {
-            const newConfig = { ...prev, [field]: value };
+            const newConfig = syncLegacySkills({ ...prev, [field]: value });
             persistConfig(newConfig);
             return newConfig;
         });
     }, [persistConfig]);
 
     const replaceConfig = useCallback((nextConfig) => {
-        const newConfig = { ...DEFAULT_CONFIG, ...nextConfig };
+        const newConfig = syncLegacySkills({ ...DEFAULT_CONFIG, ...nextConfig });
         setConfig(newConfig);
         persistConfig(newConfig);
     }, [persistConfig]);
 
     // Set skill file
     const setSkill = useCallback((side, skill) => {
-        const field = side === 'A' ? 'skillA' : 'skillB';
-        updateConfig(field, skill);
-    }, [updateConfig]);
+        const skillIndex = side === 'A' ? 0 : 1;
+        setConfig((prev) => {
+            const nextSkills = [...normalizeSkills(prev)];
+            nextSkills[skillIndex] = {
+                id: nextSkills[skillIndex]?.id || createEmptySkill().id,
+                filename: skill?.filename || '',
+                content: skill?.content || '',
+            };
+            const newConfig = syncLegacySkills({ ...prev, skills: nextSkills });
+            persistConfig(newConfig);
+            return newConfig;
+        });
+    }, [persistConfig]);
+
+    const addSkill = useCallback((skill) => {
+        setConfig((prev) => {
+            const nextSkills = [...normalizeSkills(prev)];
+            if (nextSkills.length >= 5) return prev;
+            nextSkills.push({
+                id: createEmptySkill().id,
+                filename: skill?.filename || '',
+                content: skill?.content || '',
+            });
+            const newConfig = syncLegacySkills({ ...prev, skills: nextSkills });
+            persistConfig(newConfig);
+            return newConfig;
+        });
+    }, [persistConfig]);
+
+    const setComparisonMode = useCallback((comparisonMode) => {
+        setConfig((prev) => {
+            const normalizedSkills = normalizeSkills(prev);
+            const nextSkills = comparisonMode === 'pairwise'
+                ? normalizedSkills.slice(0, 2)
+                : normalizedSkills;
+            const newConfig = syncLegacySkills({
+                ...prev,
+                comparisonMode,
+                skills: nextSkills,
+            });
+            persistConfig(newConfig);
+            return newConfig;
+        });
+    }, [persistConfig]);
+
+    const removeSkill = useCallback((index) => {
+        setConfig((prev) => {
+            const nextSkills = normalizeSkills(prev).filter((_, skillIndex) => skillIndex !== index);
+            const newConfig = syncLegacySkills({ ...prev, skills: nextSkills });
+            persistConfig(newConfig);
+            return newConfig;
+        });
+    }, [persistConfig]);
 
     // Set output type
     const setOutputType = useCallback((outputType) => {
@@ -179,8 +266,8 @@ export function EvalConfigProvider({ children }) {
 
     // Generate all configuration from skills
     const generateAll = useCallback(async (bypassCache = false) => {
-        if (!config.skillA.content || !config.skillB.content) {
-            setGenerationError('Both skill files are required');
+        if (configuredSkills.length < 2) {
+            setGenerationError('At least two skill files are required');
             return false;
         }
 
@@ -191,8 +278,8 @@ export function EvalConfigProvider({ children }) {
             const result = await generateFromSkills({
                 adapter,
                 modelSelection: settings.defaultConfigGenModel || fallbackModelSelection,
-                skillA: config.skillA,
-                skillB: config.skillB,
+                skills: configuredSkills,
+                comparisonMode: config.comparisonMode,
                 generationType: 'all',
                 promptCount: config.promptCount,
                 bypassCache
@@ -221,12 +308,12 @@ export function EvalConfigProvider({ children }) {
         } finally {
             setIsGenerating(false);
         }
-    }, [adapter, config.skillA, config.skillB, config.promptCount, settings.defaultConfigGenModel, fallbackModelSelection, persistConfig]);
+    }, [adapter, config.promptCount, configuredSkills, settings.defaultConfigGenModel, fallbackModelSelection, persistConfig]);
 
     // Regenerate just criteria
     const regenerateCriteria = useCallback(async () => {
-        if (!config.skillA.content || !config.skillB.content) {
-            setGenerationError('Both skill files are required');
+        if (configuredSkills.length < 2) {
+            setGenerationError('At least two skill files are required');
             return false;
         }
 
@@ -237,8 +324,8 @@ export function EvalConfigProvider({ children }) {
             const result = await generateFromSkills({
                 adapter,
                 modelSelection: settings.defaultConfigGenModel || fallbackModelSelection,
-                skillA: config.skillA,
-                skillB: config.skillB,
+                skills: configuredSkills,
+                comparisonMode: config.comparisonMode,
                 generationType: 'criteria',
                 existingConfig: config,
                 bypassCache: true
@@ -259,12 +346,12 @@ export function EvalConfigProvider({ children }) {
         } finally {
             setIsGenerating(false);
         }
-    }, [adapter, config, settings.defaultConfigGenModel, fallbackModelSelection, setCriteria]);
+    }, [adapter, config, configuredSkills, settings.defaultConfigGenModel, fallbackModelSelection, setCriteria]);
 
     // Regenerate just prompts
     const regeneratePrompts = useCallback(async () => {
-        if (!config.skillA.content || !config.skillB.content) {
-            setGenerationError('Both skill files are required');
+        if (configuredSkills.length < 2) {
+            setGenerationError('At least two skill files are required');
             return false;
         }
 
@@ -275,8 +362,8 @@ export function EvalConfigProvider({ children }) {
             const result = await generateFromSkills({
                 adapter,
                 modelSelection: settings.defaultConfigGenModel || fallbackModelSelection,
-                skillA: config.skillA,
-                skillB: config.skillB,
+                skills: configuredSkills,
+                comparisonMode: config.comparisonMode,
                 generationType: 'prompts',
                 promptCount: config.promptCount,
                 existingConfig: config,
@@ -298,24 +385,23 @@ export function EvalConfigProvider({ children }) {
         } finally {
             setIsGenerating(false);
         }
-    }, [adapter, config, settings.defaultConfigGenModel, fallbackModelSelection, setPrompts]);
+    }, [adapter, config, configuredSkills, settings.defaultConfigGenModel, fallbackModelSelection, setPrompts]);
 
     // Clear all configuration
     const clearConfig = useCallback(() => {
-        setConfig(DEFAULT_CONFIG);
+        setConfig(syncLegacySkills(DEFAULT_CONFIG));
         localStorage.removeItem(STORAGE_KEY);
         setGenerationError(null);
     }, []);
 
     // Check if ready to evaluate
     const isReadyToEvaluate =
-        config.skillA.content &&
-        config.skillB.content &&
+        configuredSkills.length >= 2 &&
         config.criteria.length > 0 &&
         config.prompts.length > 0;
 
     // Check if skills are loaded
-    const hasSkills = config.skillA.content && config.skillB.content;
+    const hasSkills = configuredSkills.length >= 2;
 
     return (
         <EvalConfigContext.Provider value={{
@@ -324,6 +410,9 @@ export function EvalConfigProvider({ children }) {
             generationError,
             replaceConfig,
             setSkill,
+            addSkill,
+            removeSkill,
+            setComparisonMode,
             setOutputType,
             setCriteria,
             updateCriterion,

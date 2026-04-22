@@ -3,10 +3,20 @@ import { buildJudgePrompt, parseJudgeResponse } from './buildJudgePrompt'
 import { buildJudgeMessages } from './buildJudgeMessages'
 import { runWithConcurrency } from './concurrency'
 import { captureScreenshots } from './screenshot'
+import {
+    getBaselineSkill,
+    getChallengerSkills,
+    normalizeEvaluation,
+} from './evaluationModel'
 
 function normalizeIds(evaluationIds) {
     if (!evaluationIds) return null
     return new Set(evaluationIds.filter((id) => Number.isInteger(id)))
+}
+
+function normalizeSkillIds(skillIds) {
+    if (!skillIds) return null
+    return new Set(skillIds.filter(Boolean))
 }
 
 export async function judgeSingleEval({
@@ -74,45 +84,99 @@ export async function judgeAllEvals({
     evaluations,
     criteria,
     outputType,
-    skillNames,
+    skills,
     evaluationIds,
+    challengerSkillIds,
     onProgress,
     shouldStop = () => false,
 }) {
+    const activeSkills = skills || []
+    const baselineSkill = getBaselineSkill(activeSkills)
+    const challengerSkills = getChallengerSkills(activeSkills)
     const targetIds = normalizeIds(evaluationIds)
-    const evalsToJudge = evaluations.filter(ev =>
-        (!targetIds || targetIds.has(ev.id)) &&
-        ev.resultA.status === 'complete' &&
-        ev.resultB.status === 'complete' &&
-        ev.judge.status !== 'complete',
-    )
-    const total = evalsToJudge.length
+    const targetChallengerIds = normalizeSkillIds(challengerSkillIds)
+
+    const normalizedEvaluations = evaluations.map((ev, idx) => (
+        normalizeEvaluation(ev, ev.prompt, idx, activeSkills)
+    ))
+
+    const jobs = normalizedEvaluations.flatMap((evaluation) => {
+        if (targetIds && !targetIds.has(evaluation.id)) {
+            return []
+        }
+
+        return challengerSkills
+            .filter((challenger) => {
+                if (targetChallengerIds && !targetChallengerIds.has(challenger.id)) {
+                    return false
+                }
+                const baselineResult = evaluation.resultsBySkillId?.[baselineSkill?.id]
+                const challengerResult = evaluation.resultsBySkillId?.[challenger.id]
+                const comparison = evaluation.comparisons?.[challenger.id]
+                return baselineResult?.status === 'complete'
+                    && challengerResult?.status === 'complete'
+                    && comparison?.judge?.status !== 'complete'
+            })
+            .map((challenger) => ({ evaluationId: evaluation.id, challenger }))
+    })
+
+    const total = jobs.length
     let completed = 0
 
     onProgress?.({ current: completed, total, phase: 'judging' })
 
-    await runWithConcurrency(evalsToJudge, 3, async (ev) => {
+    await runWithConcurrency(jobs, 3, async ({ evaluationId, challenger }) => {
         if (shouldStop()) return
 
+        const evaluationIndex = normalizedEvaluations.findIndex((ev) => ev.id === evaluationId)
+        if (evaluationIndex < 0) return
+
+        const evaluation = normalizedEvaluations[evaluationIndex]
         const result = await judgeSingleEval({
             adapter,
             modelSelection,
-            evaluation: ev,
+            evaluation: {
+                prompt: evaluation.prompt,
+                resultA: evaluation.resultsBySkillId?.[baselineSkill.id],
+                resultB: evaluation.resultsBySkillId?.[challenger.id],
+            },
             criteria,
             outputType,
-            skillNames,
+            skillNames: {
+                skillA: baselineSkill.filename || 'Baseline',
+                skillB: challenger.filename || 'Challenger',
+            },
         })
 
-        const originalIdx = evaluations.findIndex(e => e.id === ev.id)
-        if (originalIdx >= 0) {
-            evaluations[originalIdx].judge = result
-            evaluations[originalIdx].screenshotA = result.screenshotA
-            evaluations[originalIdx].screenshotB = result.screenshotB
+        const latestEvaluation = normalizedEvaluations[evaluationIndex]
+        normalizedEvaluations[evaluationIndex] = {
+            ...latestEvaluation,
+            comparisons: {
+                ...latestEvaluation.comparisons,
+                [challenger.id]: {
+                    ...(latestEvaluation.comparisons?.[challenger.id] || {}),
+                    baselineSkillId: baselineSkill.id,
+                    challengerSkillId: challenger.id,
+                    judge: {
+                        status: result.status,
+                        result: result.result,
+                        scores: result.scores,
+                        elapsed: result.elapsed,
+                    },
+                    screenshotA: result.screenshotA,
+                    screenshotB: result.screenshotB,
+                },
+            },
         }
 
         completed += 1
         onProgress?.({ current: completed, total, phase: 'judging' })
     })
 
-    return evaluations
+    return normalizedEvaluations.map((evaluation, idx) => normalizeEvaluation(
+        evaluation,
+        evaluation.prompt,
+        idx,
+        activeSkills,
+    ))
 }

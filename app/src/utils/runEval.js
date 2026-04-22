@@ -1,23 +1,18 @@
 import { chatWithModel } from './llmHubClient'
 import { runWithConcurrency } from './concurrency'
+import {
+    createEvaluation,
+    createPendingJudge,
+    getBaselineSkill,
+    getChallengerSkills,
+    normalizeEvaluation,
+} from './evaluationModel'
 
 export const EVALUATION_MODE_PROMPT = `You are running inside an automated skill evaluation.
 Do not ask clarifying questions, pause for user direction, request preferences, or propose options instead of completing the task.
 If details are missing, make reasonable assumptions and produce a complete final answer now.
 For frontend/UI tasks, provide the complete implementation artifact requested by the prompt.
 When a prompt does not explicitly require a framework, prefer one standalone HTML document with embedded CSS so the result can be previewed directly.`
-
-export function createEvaluation(prompt, idx) {
-    return {
-        id: idx + 1,
-        prompt,
-        resultA: { content: '', error: null, elapsed: null, status: 'pending' },
-        resultB: { content: '', error: null, elapsed: null, status: 'pending' },
-        screenshotA: null,
-        screenshotB: null,
-        judge: { status: 'pending', result: '', scores: null, elapsed: null },
-    }
-}
 
 function normalizeIndexes(promptIndexes, length) {
     if (!promptIndexes) {
@@ -27,9 +22,46 @@ function normalizeIndexes(promptIndexes, length) {
         .filter((idx) => Number.isInteger(idx) && idx >= 0 && idx < length)
 }
 
-function shouldRunSide(result, resumeOnly) {
+function shouldRunResult(result, resumeOnly) {
     if (!resumeOnly) return true
     return result?.status !== 'complete'
+}
+
+function invalidateComparisonsForSkill(evaluation, skills, skillId) {
+    const baselineSkill = getBaselineSkill(skills)
+    const challengers = getChallengerSkills(skills)
+
+    if (!baselineSkill || challengers.length === 0) {
+        return evaluation
+    }
+
+    const nextComparisons = { ...(evaluation.comparisons || {}) }
+    if (skillId === baselineSkill.id) {
+        challengers.forEach((challenger) => {
+            nextComparisons[challenger.id] = {
+                ...(nextComparisons[challenger.id] || {}),
+                baselineSkillId: baselineSkill.id,
+                challengerSkillId: challenger.id,
+                judge: createPendingJudge(),
+                screenshotA: null,
+                screenshotB: null,
+            }
+        })
+    } else if (nextComparisons[skillId]) {
+        nextComparisons[skillId] = {
+            ...nextComparisons[skillId],
+            baselineSkillId: baselineSkill.id,
+            challengerSkillId: skillId,
+            judge: createPendingJudge(),
+            screenshotA: null,
+            screenshotB: null,
+        }
+    }
+
+    return {
+        ...evaluation,
+        comparisons: nextComparisons,
+    }
 }
 
 export async function runSingleEval({
@@ -64,8 +96,7 @@ export async function runSingleEval({
 export async function runAllEvals({
     adapter,
     modelSelection,
-    skillA,
-    skillB,
+    skills,
     prompts,
     evaluations: existingEvaluations,
     promptIndexes,
@@ -75,81 +106,54 @@ export async function runAllEvals({
     onProgress,
     shouldStop = () => false,
 }) {
+    const activeSkills = skills || []
     const evaluations = existingEvaluations?.length === prompts.length
-        ? existingEvaluations.map((ev, idx) => ({
-            ...createEvaluation(prompts[idx], idx),
-            ...ev,
-            prompt: prompts[idx],
-            resultA: ev.resultA || createEvaluation(prompts[idx], idx).resultA,
-            resultB: ev.resultB || createEvaluation(prompts[idx], idx).resultB,
-            judge: ev.judge || createEvaluation(prompts[idx], idx).judge,
-        }))
-        : prompts.map(createEvaluation)
+        ? existingEvaluations.map((ev, idx) => normalizeEvaluation(ev, prompts[idx], idx, activeSkills))
+        : prompts.map((prompt, idx) => createEvaluation(prompt, idx, activeSkills))
 
-    const targetIndexes = normalizeIndexes(promptIndexes, prompts.length).filter((idx) => {
-        const ev = evaluations[idx]
-        return shouldRunSide(ev.resultA, resumeOnly) || shouldRunSide(ev.resultB, resumeOnly)
+    const targetIndexes = normalizeIndexes(promptIndexes, prompts.length)
+    const jobs = targetIndexes.flatMap((promptIndex) => {
+        const ev = evaluations[promptIndex]
+        return activeSkills
+            .filter((skill) => shouldRunResult(ev.resultsBySkillId?.[skill.id], resumeOnly))
+            .map((skill) => ({ promptIndex, skill }))
     })
 
-    const total = targetIndexes.reduce((count, idx) => {
-        const ev = evaluations[idx]
-        return count
-            + (shouldRunSide(ev.resultA, resumeOnly) ? 1 : 0)
-            + (shouldRunSide(ev.resultB, resumeOnly) ? 1 : 0)
-    }, 0)
+    const total = jobs.length
     let completed = 0
 
     onProgress?.({ current: completed, total, phase: 'generating' })
 
-    await runWithConcurrency(targetIndexes, 3, async (promptIndex) => {
+    await runWithConcurrency(jobs, 3, async ({ promptIndex, skill }) => {
         if (shouldStop()) return
 
         const prompt = prompts[promptIndex]
-        const ev = evaluations[promptIndex]
-        const runA = shouldRunSide(ev.resultA, resumeOnly)
-        const runB = shouldRunSide(ev.resultB, resumeOnly)
+        const result = await runSingleEval({
+            adapter,
+            modelSelection,
+            skillContent: skill.content,
+            baseSystemPrompt,
+            prompt,
+            maxTokens,
+        })
 
-        const [resultA, resultB] = await Promise.all([
-            runA
-                ? runSingleEval({
-                    adapter,
-                    modelSelection,
-                    skillContent: skillA.content,
-                    baseSystemPrompt,
-                    prompt,
-                    maxTokens,
-                })
-                : Promise.resolve(null),
-            runB
-                ? runSingleEval({
-                    adapter,
-                    modelSelection,
-                    skillContent: skillB.content,
-                    baseSystemPrompt,
-                    prompt,
-                    maxTokens,
-                })
-                : Promise.resolve(null),
-        ])
-
-        if (resultA) {
-            evaluations[promptIndex].resultA = { ...resultA, status: resultA.error ? 'error' : 'complete' }
-            completed += 1
-            onProgress?.({ current: completed, total, phase: 'generating' })
+        const currentEvaluation = evaluations[promptIndex]
+        const nextEvaluation = {
+            ...currentEvaluation,
+            resultsBySkillId: {
+                ...currentEvaluation.resultsBySkillId,
+                [skill.id]: {
+                    ...result,
+                    status: result.error ? 'error' : 'complete',
+                },
+            },
         }
 
-        if (resultB) {
-            evaluations[promptIndex].resultB = { ...resultB, status: resultB.error ? 'error' : 'complete' }
-            completed += 1
-            onProgress?.({ current: completed, total, phase: 'generating' })
-        }
+        evaluations[promptIndex] = invalidateComparisonsForSkill(nextEvaluation, activeSkills, skill.id)
 
-        if (resultA || resultB) {
-            evaluations[promptIndex].judge = { status: 'pending', result: '', scores: null, elapsed: null }
-            evaluations[promptIndex].screenshotA = null
-            evaluations[promptIndex].screenshotB = null
-        }
+        completed += 1
+        onProgress?.({ current: completed, total, phase: 'generating' })
     })
 
-    return evaluations
+    return evaluations.map((ev, idx) => normalizeEvaluation(ev, prompts[idx], idx, activeSkills))
 }
