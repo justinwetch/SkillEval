@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import {
     AlertCircle,
@@ -38,6 +39,53 @@ import {
     getDisplayedEvaluation,
     normalizeEvaluation,
 } from '../utils/evaluationModel'
+
+const MotionDiv = motion.div
+const MotionSpan = motion.span
+const MOTION_EASE_ENTER = [0.22, 1, 0.36, 1]
+const MOTION_EASE_EXIT = [0.4, 0, 1, 1]
+const REDUCED_MOTION_TRANSITION = { duration: 0.14, ease: MOTION_EASE_ENTER }
+const TAB_LAYOUT_TRANSITION = { type: 'spring', stiffness: 420, damping: 34, mass: 0.85 }
+const EXPAND_TRANSITION = { duration: 0.28, ease: MOTION_EASE_ENTER }
+const COLLAPSE_TRANSITION = { duration: 0.18, ease: MOTION_EASE_EXIT }
+const STATUS_RAIL_TRANSITION = { duration: 0.18, ease: MOTION_EASE_ENTER }
+
+function getRowActivity(ev) {
+    const isGenerating = ev.resultA?.status === 'running' || ev.resultB?.status === 'running'
+    const isJudging = ev.judge?.status === 'running'
+
+    if (isJudging) {
+        return {
+            isRunning: true,
+            label: 'Judging',
+            barClassName: 'bg-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.28)]',
+            badgeClassName: 'bg-amber-500/12 text-amber-600',
+        }
+    }
+
+    if (isGenerating) {
+        return {
+            isRunning: true,
+            label: 'Running',
+            barClassName: 'bg-[var(--color-accent)] shadow-[0_0_20px_rgba(37,99,235,0.24)]',
+            badgeClassName: 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]',
+        }
+    }
+
+    return {
+        isRunning: false,
+        label: '',
+        barClassName: '',
+        badgeClassName: '',
+    }
+}
+
+function getToolbarTone({ actionKey, runStatus, runError }) {
+    if (runError) return 'error'
+    if (runStatus === 'generating' || runStatus === 'judging') return 'running'
+    if (actionKey === 'complete') return 'complete'
+    return 'idle'
+}
 
 function ResultPanel({ title, filename, isWinner, winnerClassName, result, panelClassName = '' }) {
     const html = extractRenderableHtml(result?.content)
@@ -134,6 +182,7 @@ function formatModelLabel(model) {
 
 function EvaluateView({ variant = 'classic' }) {
     const isV2 = variant === 'v2'
+    const prefersReducedMotion = useReducedMotion()
     const { settings } = useSettings()
     const { connectedProviders } = useLlmHub()
     const { config, isReadyToEvaluate, updatePrompt } = useEvalConfig()
@@ -176,6 +225,8 @@ function EvaluateView({ variant = 'classic' }) {
         isV2 ? new Set(config.prompts.map((_, idx) => idx + 1)) : new Set()
     ))
     const [collapsedBreakdownCards, setCollapsedBreakdownCards] = useState(new Set())
+    const [isToolbarDetached, setIsToolbarDetached] = useState(false)
+    const toolbarSentinelRef = useRef(null)
     const activeSkills = useMemo(() => getConfiguredSkills(config), [config])
     const baselineSkill = useMemo(() => getBaselineSkill(activeSkills), [activeSkills])
     const challengerSkills = useMemo(() => getChallengerSkills(activeSkills), [activeSkills])
@@ -248,6 +299,25 @@ function EvaluateView({ variant = 'classic' }) {
         }, 1000)
         return () => window.clearInterval(intervalId)
     }, [startTime, endTime])
+
+    useEffect(() => {
+        if (!isV2) return undefined
+        const node = toolbarSentinelRef.current
+        if (!node || typeof IntersectionObserver === 'undefined') return undefined
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsToolbarDetached(entry.intersectionRatio < 1)
+            },
+            {
+                threshold: [1],
+                rootMargin: '-16px 0px 0px 0px',
+            },
+        )
+
+        observer.observe(node)
+        return () => observer.disconnect()
+    }, [isV2])
 
     const formatTime = (ms) => {
         if (!ms) return '0s'
@@ -693,6 +763,14 @@ function EvaluateView({ variant = 'classic' }) {
         }
     })()
     const PrimaryToolbarIcon = toolbarPrimaryAction.icon
+    const toolbarTone = getToolbarTone({
+        actionKey: toolbarPrimaryAction.key,
+        runStatus,
+        runError,
+    })
+    const toolbarProgressRatio = progress.total > 0 ? Math.min(Math.max(progress.current / progress.total, 0), 1) : 0
+    const toolbarMotionTransition = prefersReducedMotion ? REDUCED_MOTION_TRANSITION : TAB_LAYOUT_TRANSITION
+    const showExportActions = hasRunResults || comparisonStats.judgedCount > 0
 
     const renderPromptWithEmphasis = (prompt) => {
         const trimmed = prompt.trim()
@@ -1007,6 +1085,7 @@ function EvaluateView({ variant = 'classic' }) {
         const status = getPromptStatus(ev.id - 1)
         const maxScore = config.criteria.length * 5
         const selected = safeRunSelection.has(ev.id)
+        const rowActivity = getRowActivity(ev)
         const collapsedWinnerBadge = winner ? (
             <Badge
                 size="sm"
@@ -1027,46 +1106,107 @@ function EvaluateView({ variant = 'classic' }) {
             }
             toggleResultExpanded(ev.id)
         }
+        const handleHeaderShellClick = (event) => {
+            const interactiveTarget = event.target.closest('input, button, select, textarea, a, iframe, label')
+            if (interactiveTarget) {
+                return
+            }
+            toggleResultExpanded(ev.id)
+        }
+        const handleHeaderToggleKeyDown = (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                toggleResultExpanded(ev.id)
+            }
+        }
 
         return (
-            <Card
+            <MotionDiv
                 key={ev.id}
-                id={`result-card-${ev.id}`}
-                className={`${highlightedResultId === ev.id ? 'border-[var(--color-accent)]' : ''} ${expanded ? 'rounded-xl' : 'rounded-md'} overflow-hidden p-0`}
+                layout="position"
+                transition={prefersReducedMotion ? REDUCED_MOTION_TRANSITION : EXPAND_TRANSITION}
+                whileHover={prefersReducedMotion ? undefined : { scale: 1.002 }}
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.998 }}
             >
-                <div className="px-2.5 py-0.5">
+            <Card
+                id={`result-card-${ev.id}`}
+                className={`relative ${highlightedResultId === ev.id ? 'border-[var(--color-accent)] shadow-[0_0_0_1px_rgba(59,130,246,0.12)]' : ''} ${expanded ? 'rounded-xl' : 'rounded-md'} overflow-hidden border-[var(--color-border)]/90 bg-[var(--color-bg-secondary)] p-0 transition-[background-color,border-color,box-shadow,transform] duration-200 hover:bg-[var(--color-bg-elevated)] hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)] active:translate-y-px`}
+            >
+                <AnimatePresence initial={false}>
+                    {rowActivity.isRunning ? (
+                        <MotionDiv
+                            key={`row-activity-${ev.id}`}
+                            aria-hidden="true"
+                            className={`pointer-events-none absolute inset-y-3 left-0 z-10 w-1 rounded-r-full ${rowActivity.barClassName}`}
+                            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scaleY: 0.65 }}
+                            animate={{ opacity: 1, scaleY: 1 }}
+                            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scaleY: 0.7 }}
+                            transition={STATUS_RAIL_TRANSITION}
+                        />
+                    ) : null}
+                </AnimatePresence>
+                <div
+                    className="px-2.5 py-0.5"
+                    onClick={handleHeaderShellClick}
+                >
                     <div className="flex min-h-[38px] items-center gap-2">
                         {hasRunResults ? (
                             <input
                                 type="checkbox"
                                 checked={selected}
                                 onChange={() => toggleSelection(setRunSelection, ev.id)}
+                                onClick={(event) => event.stopPropagation()}
                                 aria-label={`Select eval ${ev.id}`}
                                 className="h-3 w-3 shrink-0"
                             />
                         ) : null}
-                        <Badge size="sm" className="shrink-0">
-                            {`Eval ${ev.id}`}
-                        </Badge>
-                        <button
-                            type="button"
-                            onClick={() => toggleResultExpanded(ev.id)}
-                            className="flex min-w-0 flex-1 items-center justify-between gap-1.5 text-left"
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={(event) => {
+                                event.stopPropagation()
+                                toggleResultExpanded(ev.id)
+                            }}
+                            onKeyDown={handleHeaderToggleKeyDown}
+                            className="flex min-w-0 flex-1 items-center justify-between gap-1.5 rounded-md px-1 py-1 text-left outline-none transition-colors duration-200 hover:bg-[var(--color-bg-tertiary)]/70 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/30"
                         >
-                            <div className={`min-w-0 flex-1 text-lg leading-8 text-[var(--color-text-primary)] ${expanded ? 'whitespace-normal break-words' : 'truncate'}`}>
-                                {renderPromptWithEmphasis(ev.prompt)}
-                            </div>
-                            <div className="flex shrink-0 items-center gap-1">
-                                {collapsedWinnerBadge}
-                                <div className={headerToggleClassName}>
-                                    {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                                <Badge size="sm" className="shrink-0">
+                                    {`Eval ${ev.id}`}
+                                </Badge>
+                                <div className={`min-w-0 flex-1 text-lg leading-8 text-[var(--color-text-primary)] ${expanded ? 'whitespace-normal break-words' : 'truncate'}`}>
+                                    {renderPromptWithEmphasis(ev.prompt)}
                                 </div>
                             </div>
-                        </button>
+                            <div className="flex shrink-0 items-center gap-1">
+                                {rowActivity.isRunning ? (
+                                    <span className={`inline-flex h-4.5 items-center rounded-full px-1.5 text-[10px] font-medium leading-4 ${rowActivity.badgeClassName}`}>
+                                        {rowActivity.label}
+                                    </span>
+                                ) : null}
+                                {collapsedWinnerBadge}
+                                <MotionDiv
+                                    className={headerToggleClassName}
+                                    animate={{ rotate: expanded ? 180 : 0 }}
+                                    transition={prefersReducedMotion ? REDUCED_MOTION_TRANSITION : { duration: 0.14, ease: MOTION_EASE_ENTER }}
+                                >
+                                    <ChevronDown size={11} />
+                                </MotionDiv>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
+                <AnimatePresence initial={false}>
                 {expanded ? (
+                    <MotionDiv
+                        key={`expanded-result-${ev.id}`}
+                        initial={prefersReducedMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: 6 }}
+                        animate={{ height: 'auto', opacity: 1, y: 0 }}
+                        exit={prefersReducedMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: 2 }}
+                        transition={prefersReducedMotion ? REDUCED_MOTION_TRANSITION : EXPAND_TRANSITION}
+                        className="overflow-hidden"
+                    >
                     <div
                         className="space-y-5 border-t border-[var(--color-border)] px-5 py-5"
                         onClick={handleExpandedBodyClick}
@@ -1094,7 +1234,7 @@ function EvaluateView({ variant = 'classic' }) {
                             <button
                                 type="button"
                                 onClick={() => toggleJudgeExpanded(ev.id)}
-                                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-200 hover:bg-[var(--color-bg-tertiary)]"
                             >
                                 <div>
                                     <div className="text-sm font-semibold text-[var(--color-text-primary)]">
@@ -1104,12 +1244,25 @@ function EvaluateView({ variant = 'classic' }) {
                                         Collapsed by default to keep the review surface compact.
                                     </div>
                                 </div>
-                                <div className="text-[var(--color-text-muted)]">
-                                    {judgeCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                                </div>
+                                <MotionDiv
+                                    className="text-[var(--color-text-muted)]"
+                                    animate={{ rotate: judgeCollapsed ? 0 : 180 }}
+                                    transition={prefersReducedMotion ? REDUCED_MOTION_TRANSITION : { duration: 0.14, ease: MOTION_EASE_ENTER }}
+                                >
+                                    <ChevronDown size={16} />
+                                </MotionDiv>
                             </button>
 
+                            <AnimatePresence initial={false}>
                             {!judgeCollapsed ? (
+                                <MotionDiv
+                                    key={`judge-panel-${ev.id}`}
+                                    initial={prefersReducedMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: 4 }}
+                                    animate={{ height: 'auto', opacity: 1, y: 0 }}
+                                    exit={prefersReducedMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: 2 }}
+                                    transition={prefersReducedMotion ? REDUCED_MOTION_TRANSITION : EXPAND_TRANSITION}
+                                    className="overflow-hidden"
+                                >
                                 <div className="space-y-4 border-t border-[var(--color-border)] px-4 py-4">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-xs text-[var(--color-text-muted)]">{pairLabelA}</span>
@@ -1154,11 +1307,16 @@ function EvaluateView({ variant = 'classic' }) {
                                         {ev.judge?.result || 'No judge output yet.'}
                                     </div>
                                 </div>
+                                </MotionDiv>
                             ) : null}
+                            </AnimatePresence>
                         </div>
                     </div>
+                    </MotionDiv>
                 ) : null}
+                </AnimatePresence>
             </Card>
+            </MotionDiv>
         )
     }
 
@@ -1443,122 +1601,180 @@ function EvaluateView({ variant = 'classic' }) {
                 <div className={isV2 ? 'space-y-4' : ''}>
                     {isV2 ? (
                         <>
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-1">
-                                    {[
-                                        ['individual', 'Individual Analysis'],
-                                        ['results', 'Results'],
-                                    ].map(([id, label]) => (
-                                        <button
-                                            key={id}
-                                            type="button"
-                                            onClick={() => setActiveTab(id)}
-                                            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === id ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-sm' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
-                                        >
-                                            {label}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {challengerSkills.length > 1 ? (
-                                        <label className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-                                            <span>Compare Against</span>
-                                            <select
-                                                value={currentChallengerSkill?.id || ''}
-                                                onChange={(event) => setSelectedChallengerId(event.target.value)}
-                                                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
-                                            >
-                                                {challengerSkills.map((skill) => (
-                                                    <option key={skill.id} value={skill.id}>
-                                                        {skill.filename || skill.id}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </label>
-                                    ) : null}
-                                    <Button
-                                        size="sm"
-                                        className="min-w-[132px]"
-                                        variant={toolbarPrimaryAction.key === 'complete' ? 'secondary' : 'primary'}
-                                        onClick={toolbarPrimaryAction.action}
-                                        disabled={toolbarPrimaryAction.disabled}
-                                    >
-                                        <PrimaryToolbarIcon size={15} className={toolbarPrimaryAction.iconClassName || ''} />
-                                        {toolbarPrimaryAction.label}
-                                    </Button>
-                                    {showStopAction ? (
+                            <div ref={toolbarSentinelRef} aria-hidden="true" className="h-px w-full" />
+                            <div
+                                className={`sticky top-4 z-20 space-y-3 rounded-[1.25rem] border px-3 py-3 transition-[box-shadow,border-color,background-color,backdrop-filter] duration-200 ${
+                                    isToolbarDetached
+                                        ? 'border-[var(--color-border-hover)] bg-[var(--color-bg-primary)] shadow-[0_20px_48px_rgba(15,23,42,0.14)] backdrop-blur-xl'
+                                        : 'border-transparent bg-transparent'
+                                }`}
+                            >
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <LayoutGroup id="evaluate-v2-primary-tabs">
+                                        <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-1">
+                                            {[
+                                                ['individual', 'Individual Analysis'],
+                                                ['results', 'Results'],
+                                            ].map(([id, label]) => {
+                                                const isActive = activeTab === id
+                                                return (
+                                                    <button
+                                                        key={id}
+                                                        type="button"
+                                                        onClick={() => setActiveTab(id)}
+                                                        className={`relative rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 ${isActive ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+                                                    >
+                                                        {isActive ? (
+                                                            <MotionSpan
+                                                                layoutId="evaluate-v2-primary-tab"
+                                                                className="absolute inset-0 rounded-lg bg-[var(--color-bg-primary)] shadow-[0_10px_22px_rgba(15,23,42,0.08)]"
+                                                                transition={toolbarMotionTransition}
+                                                            />
+                                                        ) : null}
+                                                        <span className="relative z-10">{label}</span>
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </LayoutGroup>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {challengerSkills.length > 1 ? (
+                                            <label className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                                                <span>Compare Against</span>
+                                                <select
+                                                    value={currentChallengerSkill?.id || ''}
+                                                    onChange={(event) => setSelectedChallengerId(event.target.value)}
+                                                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+                                                >
+                                                    {challengerSkills.map((skill) => (
+                                                        <option key={skill.id} value={skill.id}>
+                                                            {skill.filename || skill.id}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                        ) : null}
                                         <Button
                                             size="sm"
-                                            variant="ghost"
-                                            className="min-w-[88px]"
-                                            onClick={requestStop}
-                                            disabled={isStopping}
+                                            className={`relative min-w-[132px] overflow-hidden ${
+                                                toolbarTone === 'complete'
+                                                    ? 'bg-emerald-600 shadow-md shadow-emerald-500/20 hover:bg-emerald-600/95 hover:shadow-lg hover:shadow-emerald-500/25'
+                                                    : ''
+                                            }`}
+                                            onClick={toolbarPrimaryAction.action}
+                                            disabled={toolbarPrimaryAction.disabled && toolbarPrimaryAction.key !== 'complete'}
                                         >
-                                            <StopCircle size={15} />
-                                            Stop
+                                            {toolbarTone === 'running' && !prefersReducedMotion ? (
+                                                <MotionSpan
+                                                    aria-hidden="true"
+                                                    className="absolute inset-y-0 left-0 rounded-[inherit] bg-white/14"
+                                                    initial={false}
+                                                    animate={{ width: `${Math.max(toolbarProgressRatio * 100, 12)}%` }}
+                                                    transition={{ duration: 0.24, ease: MOTION_EASE_ENTER }}
+                                                />
+                                            ) : null}
+                                            <span className="relative z-10 inline-flex items-center gap-2">
+                                                <AnimatePresence initial={false} mode="wait">
+                                                    <MotionSpan
+                                                        key={`${toolbarPrimaryAction.key}-${toolbarPrimaryAction.label}`}
+                                                        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                                                        transition={prefersReducedMotion ? REDUCED_MOTION_TRANSITION : { duration: 0.24, ease: MOTION_EASE_ENTER }}
+                                                        className="inline-flex items-center gap-2"
+                                                    >
+                                                        <PrimaryToolbarIcon size={15} className={toolbarPrimaryAction.iconClassName || ''} />
+                                                        {toolbarPrimaryAction.label}
+                                                    </MotionSpan>
+                                                </AnimatePresence>
+                                            </span>
                                         </Button>
-                                    ) : null}
-                                </div>
-                            </div>
-                            {(isStopping || runError || (activeTab === 'individual' && hasRunResults) || (!isBusy && toolbarPrimaryAction.key === 'complete' && !hasSelectedPrompts)) ? (
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <div className="min-h-[24px] text-sm">
-                                        {isStopping ? (
-                                            <p className="text-[var(--color-warning)]">
-                                                Current batch will finish, then execution stops.
-                                            </p>
-                                        ) : runError ? (
-                                            <p className="text-[var(--color-error)]">{runError}</p>
-                                        ) : !isBusy && toolbarPrimaryAction.key === 'complete' && !hasSelectedPrompts ? (
-                                            <p className="text-[var(--color-text-muted)]">
-                                                Select prompts in Individual Analysis to enable re-run.
-                                            </p>
+                                        {showStopAction ? (
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="min-w-[88px]"
+                                                onClick={requestStop}
+                                                disabled={isStopping}
+                                            >
+                                                <StopCircle size={15} />
+                                                Stop
+                                            </Button>
                                         ) : null}
                                     </div>
-                                    {activeTab === 'individual' && hasRunResults ? (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-[var(--color-text-secondary)]">
-                                                {safeRunSelection.size} selected
-                                            </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => setRunSelection(allPromptsSelected ? new Set() : new Set(pairedEvaluations.map((ev) => ev.id)))}
-                                                disabled={pairedEvaluations.length === 0}
-                                                className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                {allPromptsSelected ? 'Clear Selection' : 'Select All'}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setExpandedResultIds(allResultsExpanded ? new Set() : new Set(pairedEvaluations.map((ev) => ev.id)))}
-                                                disabled={pairedEvaluations.length === 0}
-                                                className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                {allResultsExpanded ? 'Collapse All' : 'Expand All'}
-                                            </button>
+                                </div>
+                                {(isStopping || runError || (activeTab === 'individual' && hasRunResults) || (!isBusy && toolbarPrimaryAction.key === 'complete' && !hasSelectedPrompts)) ? (
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="min-h-[24px] text-sm">
+                                            {isStopping ? (
+                                                <p className="text-[var(--color-warning)]">
+                                                    Current batch will finish, then execution stops.
+                                                </p>
+                                            ) : runError ? (
+                                                <p className="text-[var(--color-error)]">{runError}</p>
+                                            ) : !isBusy && toolbarPrimaryAction.key === 'complete' && !hasSelectedPrompts ? (
+                                                <p className="text-[var(--color-text-muted)]">
+                                                    Select prompts in Individual Analysis to enable re-run.
+                                                </p>
+                                            ) : null}
                                         </div>
-                                    ) : null}
-                                </div>
-                            ) : null}
-                            {activeTab === 'results' ? (
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-1">
-                                        {[
-                                            ['summary', 'Summary'],
-                                            ['breakdown', 'Breakdown'],
-                                        ].map(([id, label]) => (
-                                            <button
-                                                key={id}
-                                                type="button"
-                                                onClick={() => setV2ResultsTab(id)}
-                                                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${v2ResultsTab === id ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-sm' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
-                                            >
-                                                {label}
-                                            </button>
-                                        ))}
+                                        {activeTab === 'individual' && hasRunResults ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-[var(--color-text-secondary)]">
+                                                    {safeRunSelection.size} selected
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRunSelection(allPromptsSelected ? new Set() : new Set(pairedEvaluations.map((ev) => ev.id)))}
+                                                    disabled={pairedEvaluations.length === 0}
+                                                    className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    {allPromptsSelected ? 'Clear Selection' : 'Select All'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setExpandedResultIds(allResultsExpanded ? new Set() : new Set(pairedEvaluations.map((ev) => ev.id)))}
+                                                    disabled={pairedEvaluations.length === 0}
+                                                    className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    {allResultsExpanded ? 'Collapse All' : 'Expand All'}
+                                                </button>
+                                            </div>
+                                        ) : null}
                                     </div>
-                                </div>
-                            ) : null}
+                                ) : null}
+                                {activeTab === 'results' ? (
+                                    <LayoutGroup id="evaluate-v2-results-tabs">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-1">
+                                                {[
+                                                    ['summary', 'Summary'],
+                                                    ['breakdown', 'Breakdown'],
+                                                ].map(([id, label]) => {
+                                                    const isActive = v2ResultsTab === id
+                                                    return (
+                                                        <button
+                                                            key={id}
+                                                            type="button"
+                                                            onClick={() => setV2ResultsTab(id)}
+                                                            className={`relative rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 ${isActive ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+                                                        >
+                                                            {isActive ? (
+                                                                <MotionSpan
+                                                                    layoutId="evaluate-v2-results-tab"
+                                                                    className="absolute inset-0 rounded-lg bg-[var(--color-bg-primary)] shadow-[0_10px_22px_rgba(15,23,42,0.08)]"
+                                                                    transition={toolbarMotionTransition}
+                                                                />
+                                                            ) : null}
+                                                            <span className="relative z-10">{label}</span>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    </LayoutGroup>
+                                ) : null}
+                            </div>
                         </>
                     ) : null}
 
@@ -2196,16 +2412,26 @@ function EvaluateView({ variant = 'classic' }) {
                 </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-2 border-t border-[var(--color-border)] pt-6">
-                <Button variant="secondary" onClick={exportAsCSV} disabled={pairedEvaluations.length === 0}>
-                    <Download size={16} />
-                    Export CSV
-                </Button>
-                <Button variant="secondary" onClick={exportAsJSON} disabled={pairedEvaluations.length === 0}>
-                    <Download size={16} />
-                    Export JSON
-                </Button>
-            </div>
+            <AnimatePresence initial={false}>
+                {showExportActions ? (
+                    <MotionDiv
+                        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+                        transition={prefersReducedMotion ? REDUCED_MOTION_TRANSITION : { duration: 0.18, ease: MOTION_EASE_ENTER }}
+                        className="mt-6 flex justify-end gap-2 border-t border-[var(--color-border)] pt-6"
+                    >
+                        <Button variant="secondary" onClick={exportAsCSV} disabled={pairedEvaluations.length === 0}>
+                            <Download size={16} />
+                            Export CSV
+                        </Button>
+                        <Button variant="secondary" onClick={exportAsJSON} disabled={pairedEvaluations.length === 0}>
+                            <Download size={16} />
+                            Export JSON
+                        </Button>
+                    </MotionDiv>
+                ) : null}
+            </AnimatePresence>
         </div>
     )
 }
