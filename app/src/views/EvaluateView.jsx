@@ -247,7 +247,7 @@ function EvaluateView() {
                                 Screenshot server not running
                             </p>
                             <p className="text-xs text-[var(--color-text-secondary)] mb-2">
-                                Visual judging requires the screenshot server. Run: <code className="bg-[var(--color-bg-tertiary)] px-1 rounded">node screenshot-server.js</code>
+                                Visual judging will fall back to source-only analysis until the screenshot server is running. For rendered screenshots, run: <code className="bg-[var(--color-bg-tertiary)] px-1 rounded">node screenshot-server.js</code>
                             </p>
                             <Button
                                 variant="ghost"

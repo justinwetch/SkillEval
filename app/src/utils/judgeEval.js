@@ -26,21 +26,31 @@ export async function judgeSingleEval({
     skillNames = { skillA: 'Skill A', skillB: 'Skill B' }
 }) {
     const startTime = Date.now();
-    const isVisual = outputType === 'visual' || outputType === 'both';
-    const includeCode = outputType === 'text' || outputType === 'both';
+    const requestedVisual = outputType === 'visual' || outputType === 'both';
+    const requestedCode = outputType === 'text' || outputType === 'both';
 
     try {
         // Capture screenshots if needed
         let screenshots = { screenshotA: null, screenshotB: null };
-        if (isVisual) {
+        if (requestedVisual) {
             screenshots = await captureScreenshots(
                 evaluation.resultA.content,
                 evaluation.resultB.content
             );
         }
 
+        const hasScreenshots = Boolean(screenshots.screenshotA && screenshots.screenshotB);
+        const useVisualJudging = requestedVisual && hasScreenshots;
+        const includeCode = requestedCode || !useVisualJudging;
+        const effectiveOutputType = useVisualJudging
+            ? (includeCode ? 'both' : 'visual')
+            : 'text';
+        const screenshotFallbackNote = requestedVisual && !useVisualJudging
+            ? 'Screenshots were unavailable, so this judgment is based on the source content only.'
+            : null;
+
         // Build the judge system prompt
-        const systemPrompt = buildJudgePrompt(criteria, outputType);
+        const systemPrompt = buildJudgePrompt(criteria, effectiveOutputType);
 
         // Build message content
         const messageContent = [];
@@ -52,7 +62,7 @@ export async function judgeSingleEval({
         });
 
         // Add screenshot A if available
-        if (screenshots.screenshotA) {
+        if (useVisualJudging && screenshots.screenshotA) {
             messageContent.push({
                 type: 'text',
                 text: '### Screenshot of Result A:'
@@ -82,7 +92,7 @@ export async function judgeSingleEval({
         });
 
         // Add screenshot B if available
-        if (screenshots.screenshotB) {
+        if (useVisualJudging && screenshots.screenshotB) {
             messageContent.push({
                 type: 'text',
                 text: '### Screenshot of Result B:'
@@ -106,13 +116,17 @@ export async function judgeSingleEval({
         }
 
         // Add final instruction
+        const finalInstruction = useVisualJudging && includeCode
+            ? '\n\nPlease evaluate both outputs based on the screenshots and source content.'
+            : useVisualJudging
+                ? '\n\nPlease evaluate both outputs based on the screenshots above.'
+                : '\n\nPlease evaluate both outputs based on the content above.';
+
         messageContent.push({
             type: 'text',
-            text: isVisual && includeCode
-                ? '\n\nPlease evaluate both outputs based on the screenshots and source content.'
-                : isVisual
-                    ? '\n\nPlease evaluate both outputs based on the screenshots above.'
-                    : '\n\nPlease evaluate both outputs based on the content above.'
+            text: screenshotFallbackNote
+                ? `${screenshotFallbackNote}${finalInstruction}`
+                : finalInstruction
         });
 
         // Call the judge
@@ -130,7 +144,7 @@ export async function judgeSingleEval({
 
         return {
             status: 'complete',
-            result: resultText,
+            result: screenshotFallbackNote ? `${screenshotFallbackNote}\n\n${resultText}` : resultText,
             scores,
             elapsed,
             screenshotA: screenshots.screenshotA,
