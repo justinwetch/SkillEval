@@ -147,6 +147,27 @@ function EvaluateView() {
         }
     }
 
+    const handleJudgeAll = async () => {
+        const needsScreenshots = config.outputType === 'visual' || config.outputType === 'both'
+
+        if (needsScreenshots) {
+            const latestStatus = await checkServerHealth()
+            setScreenshotServerStatus(latestStatus)
+
+            if (!latestStatus.available) {
+                const confirmed = window.confirm(
+                    'Screenshot server is unavailable. Continue with text-only evaluation based on the code/source instead?'
+                )
+
+                if (!confirmed) {
+                    return
+                }
+            }
+        }
+
+        runJudgments(judgeModel)
+    }
+
     // API key required state
     if (needsApiKey) {
         return (
@@ -417,7 +438,7 @@ function EvaluateView() {
                             <option value="claude-opus-4-5-20251101">Opus 4.5</option>
                         </select>
                         <Button
-                            onClick={() => runJudgments(judgeModel)}
+                            onClick={handleJudgeAll}
                             disabled={runStatus !== 'idle' || !stats.canJudge}
                         >
                             {runStatus === 'judging' ? (

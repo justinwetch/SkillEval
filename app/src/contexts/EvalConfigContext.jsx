@@ -18,7 +18,7 @@ const DEFAULT_CONFIG = {
     outputTypeReasoning: '',
     criteria: [],
     prompts: [],
-    promptCount: 50,
+    promptCount: 5,
 };
 
 export function EvalConfigProvider({ children }) {

@@ -93,6 +93,7 @@ function ConfigureView() {
 
     // Prompts to display (limited unless expanded)
     const displayPrompts = showAllPrompts ? config.prompts : config.prompts.slice(0, 5)
+    const promptCountOptions = [3, 5, 10, 25, 50, 100]
 
     return (
         <div className="animate-fade-in max-w-3xl mx-auto">
@@ -274,6 +275,59 @@ function ConfigureView() {
                     </div>
                 </div>
 
+                {/* Configurations */}
+                <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 className="text-sm font-medium text-[var(--color-text-primary)]">Configurations</h3>
+                            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                                Choose how to judge results and how many prompts to generate
+                            </p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end">
+                        <div>
+                            <label className="block text-xs text-[var(--color-text-muted)] mb-2">
+                                Evaluation Mode
+                            </label>
+                            <div className="flex gap-2 flex-wrap">
+                                {['text', 'visual', 'both'].map((type) => (
+                                    <button
+                                        key={type}
+                                        onClick={() => setOutputType(type)}
+                                        className={`
+                                            px-4 py-2 rounded-lg text-sm font-medium transition-all
+                                            ${config.outputType === type
+                                                ? 'bg-[var(--color-accent)] text-white'
+                                                : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)]'
+                                            }
+                                        `}
+                                    >
+                                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-[var(--color-text-muted)] mb-2">
+                                Prompt Count
+                            </label>
+                            <select
+                                value={config.promptCount}
+                                onChange={(e) => setPromptCount(Number(e.target.value))}
+                                className="text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg px-3 py-2 min-w-[110px]"
+                            >
+                                {promptCountOptions.map((count) => (
+                                    <option key={count} value={count}>{count}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    {config.outputTypeReasoning && (
+                        <p className="text-xs text-[var(--color-text-muted)] mt-2">{config.outputTypeReasoning}</p>
+                    )}
+                </div>
+
                 {/* Generate All Button */}
                 <div className="mb-6">
                     <Button
@@ -290,39 +344,12 @@ function ConfigureView() {
                         ) : (
                             <>
                                 <Wand2 size={18} />
-                                Generate All from Skills
+                                Generate {config.promptCount} Prompt{config.promptCount === 1 ? '' : 's'} from Skills
                             </>
                         )}
                     </Button>
                     {generationError && (
                         <p className="text-sm text-[var(--color-error)] mt-2">{generationError}</p>
-                    )}
-                </div>
-
-                {/* Output Type */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-medium text-[var(--color-text-primary)]">Output Type</h3>
-                    </div>
-                    <div className="flex gap-2">
-                        {['text', 'visual', 'both'].map((type) => (
-                            <button
-                                key={type}
-                                onClick={() => setOutputType(type)}
-                                className={`
-                                    px-4 py-2 rounded-lg text-sm font-medium transition-all
-                                    ${config.outputType === type
-                                        ? 'bg-[var(--color-accent)] text-white'
-                                        : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)]'
-                                    }
-                                `}
-                            >
-                                {type.charAt(0).toUpperCase() + type.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-                    {config.outputTypeReasoning && (
-                        <p className="text-xs text-[var(--color-text-muted)] mt-2">{config.outputTypeReasoning}</p>
                     )}
                 </div>
 
@@ -409,23 +436,9 @@ function ConfigureView() {
                 {/* Prompts */}
                 <div>
                     <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                            <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
-                                Prompts ({config.prompts.length})
-                            </h3>
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs text-[var(--color-text-muted)]">Count:</label>
-                                <select
-                                    value={config.promptCount}
-                                    onChange={(e) => setPromptCount(Number(e.target.value))}
-                                    className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-2 py-1"
-                                >
-                                    {[10, 25, 50, 100].map(n => (
-                                        <option key={n} value={n}>{n}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
+                        <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
+                            Prompts ({config.prompts.length})
+                        </h3>
                         <Button
                             variant="ghost"
                             size="sm"
