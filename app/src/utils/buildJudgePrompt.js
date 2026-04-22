@@ -2,6 +2,8 @@
  * Build dynamic judge prompt from configured criteria
  */
 
+import { parseJsonFromText } from './json';
+
 /**
  * Build the system prompt for the judge based on configured criteria
  * @param {Array} criteria - Array of criterion objects with id, name, description, rubric
@@ -92,14 +94,10 @@ ${breakdownFields}
 export function parseJudgeResponse(response) {
     if (!response) return null;
 
-    // Try to extract JSON block
-    const jsonMatch = response.match(/```json\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-        try {
-            return JSON.parse(jsonMatch[1].trim());
-        } catch (e) {
-            console.warn('Failed to parse judge JSON:', e);
-        }
+    try {
+        return parseJsonFromText(response);
+    } catch (e) {
+        console.warn('Failed to parse judge JSON:', e);
     }
 
     // Fallback: try to parse winner from text
