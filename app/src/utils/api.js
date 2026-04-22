@@ -2,6 +2,8 @@
  * Anthropic API client wrapper for browser-side usage
  */
 
+import { parseJsonFromText } from './json';
+
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 /**
@@ -70,18 +72,9 @@ export async function callAnthropic({
 
         if (jsonMode && textContent) {
             try {
-                // Try to parse as JSON, handling potential markdown code blocks
-                let jsonStr = textContent;
-
-                // Remove markdown code blocks if present
-                const jsonMatch = textContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-                if (jsonMatch) {
-                    jsonStr = jsonMatch[1];
-                }
-
                 return {
                     ...data,
-                    parsed: JSON.parse(jsonStr.trim())
+                    parsed: parseJsonFromText(textContent)
                 };
             } catch (parseError) {
                 console.warn('Failed to parse JSON response:', parseError);
