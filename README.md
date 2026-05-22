@@ -2,6 +2,8 @@
 
 A visual workbench for A/B testing AI skills. Upload two skill files, run them through a batch of test prompts, and let an AI judge score the results.
 
+DEMO VIDEO: [SkillEval v1.1 product video](https://www.linkedin.com/posts/justinwetch_skilleval-v11-is-out-now-featuring-a-refreshed-ugcPost-7463683888738058240-N887/)
+
 I built this to improve Anthropic's frontend design skill and prove the improvements with data. That project was hardcoded to frontend evaluation, so I extracted the core evaluation engine and made it extensible—now you can 1v1 any two skills, in any domain, with any model.
 
 For the full story on how this started and why data-driven skill development matters, see [Teaching Claude to Design Better](https://www.justinwetch.com/blog/improvingclaudefrontend).
