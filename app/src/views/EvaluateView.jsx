@@ -198,25 +198,25 @@ function EvaluateView() {
         switch (status) {
             case 'complete':
                 return (
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-green-500/10 text-green-600">
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--color-success-subtle)] text-[var(--color-success)]">
                         <CheckCircle2 size={12} />Complete{timeStr}
                     </span>
                 )
             case 'error':
                 return (
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-red-500/10 text-red-600">
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--color-error-subtle)] text-[var(--color-error)]">
                         <XCircle size={12} />Error
                     </span>
                 )
             case 'running':
                 return (
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-600">
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--color-info-subtle)] text-[var(--color-info)]">
                         <Loader2 size={12} className="animate-spin" />Running
                     </span>
                 )
             default:
                 return (
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
                         <Clock size={12} />
                         Pending
                     </span>
@@ -285,7 +285,7 @@ function EvaluateView() {
                         <select
                             value={generationModel}
                             onChange={(e) => setGenerationModel(e.target.value)}
-                            className="text-sm px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[#F5E6D3] text-[#2D2018] font-medium"
+                            className="text-sm px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-medium"
                         >
                             {modelGroups.map(({ provider, models }) => (
                                 <optgroup key={provider.id} label={provider.label}>
@@ -412,7 +412,7 @@ function EvaluateView() {
                         <select
                             value={judgeModel}
                             onChange={(e) => setJudgeModel(e.target.value)}
-                            className="text-sm px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[#F5E6D3] text-[#2D2018] font-medium"
+                            className="text-sm px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-medium"
                         >
                             {modelGroups.map(({ provider, models }) => (
                                 <optgroup key={provider.id} label={provider.label}>
@@ -505,15 +505,15 @@ function EvaluateView() {
                             {/* Overall Results */}
                             {stats.judgedCount > 0 && (
                                 <div className="flex gap-6 mb-6 flex-wrap">
-                                    <div className={`text-center p-4 rounded-lg ${stats.aWins > stats.bWins ? 'bg-blue-500/10' : 'bg-[var(--color-bg-tertiary)]'}`}>
-                                        <div className="text-3xl font-bold text-blue-500">{stats.aWins}</div>
+                                    <div className={`text-center p-4 rounded-[var(--radius-md)] ${stats.aWins > stats.bWins ? 'bg-[var(--color-info-subtle)]' : 'bg-[var(--color-bg-tertiary)]'}`}>
+                                        <div className="text-3xl font-bold text-[var(--color-skill-a)]">{stats.aWins}</div>
                                         <div className="text-xs text-[var(--color-text-muted)]">Skill A Wins</div>
                                     </div>
-                                    <div className={`text-center p-4 rounded-lg ${stats.bWins > stats.aWins ? 'bg-orange-500/10' : 'bg-[var(--color-bg-tertiary)]'}`}>
-                                        <div className="text-3xl font-bold text-orange-500">{stats.bWins}</div>
+                                    <div className={`text-center p-4 rounded-[var(--radius-md)] ${stats.bWins > stats.aWins ? 'bg-[var(--color-warning-subtle)]' : 'bg-[var(--color-bg-tertiary)]'}`}>
+                                        <div className="text-3xl font-bold text-[var(--color-skill-b)]">{stats.bWins}</div>
                                         <div className="text-xs text-[var(--color-text-muted)]">Skill B Wins</div>
                                     </div>
-                                    <div className="text-center p-4 rounded-lg bg-[var(--color-bg-tertiary)]">
+                                    <div className="text-center p-4 rounded-[var(--radius-md)] bg-[var(--color-bg-tertiary)]">
                                         <div className="text-3xl font-bold text-[var(--color-text-muted)]">{stats.judgedCount - stats.aWins - stats.bWins}</div>
                                         <div className="text-xs text-[var(--color-text-muted)]">Ties</div>
                                     </div>
@@ -544,15 +544,15 @@ function EvaluateView() {
                                                 >
                                                     <td className="py-3 px-3 text-[var(--color-text-muted)]">{ev.id}</td>
                                                     <td className="py-3 px-3 text-[var(--color-text-primary)] max-w-xs truncate">{ev.prompt.slice(0, 60)}...</td>
-                                                    <td className={`py-3 px-3 text-center font-medium ${ev.judge.scores?.winner === 'A' ? 'bg-blue-500/10 text-blue-600' : ''}`}>
+                                                    <td className={`py-3 px-3 text-center font-medium ${ev.judge.scores?.winner === 'A' ? 'bg-[var(--color-info-subtle)] text-[var(--color-skill-a)]' : ''}`}>
                                                         {ev.judge.scores?.scoreA ? `${ev.judge.scores.scoreA}/${maxScore}` : '-'}
                                                     </td>
-                                                    <td className={`py-3 px-3 text-center font-medium ${ev.judge.scores?.winner === 'B' ? 'bg-orange-500/10 text-orange-600' : ''}`}>
+                                                    <td className={`py-3 px-3 text-center font-medium ${ev.judge.scores?.winner === 'B' ? 'bg-[var(--color-warning-subtle)] text-[var(--color-skill-b)]' : ''}`}>
                                                         {ev.judge.scores?.scoreB ? `${ev.judge.scores.scoreB}/${maxScore}` : '-'}
                                                     </td>
                                                     <td className="py-3 px-3 text-center">
                                                         {ev.judge.scores?.winner && (
-                                                            <span className={`font-bold ${ev.judge.scores.winner === 'A' ? 'text-blue-500' : ev.judge.scores.winner === 'B' ? 'text-orange-500' : 'text-gray-500'}`}>
+                                                            <span className={`font-bold ${ev.judge.scores.winner === 'A' ? 'text-[var(--color-skill-a)]' : ev.judge.scores.winner === 'B' ? 'text-[var(--color-skill-b)]' : 'text-[var(--color-tie)]'}`}>
                                                                 {ev.judge.scores.winner === 'A' ? 'A' : ev.judge.scores.winner === 'B' ? 'B' : 'TIE'}
                                                             </span>
                                                         )}
@@ -617,12 +617,12 @@ function EvaluateView() {
                                                     return (
                                                         <tr key={criterion.id} className="border-b border-[var(--color-border)]">
                                                             <td className="py-3 px-3 text-[var(--color-text-primary)]">{criterion.name}</td>
-                                                            <td className="py-3 px-3 text-center font-medium text-blue-500">{aWins}</td>
-                                                            <td className="py-3 px-3 text-center font-medium text-orange-500">{bWins}</td>
+                                                            <td className="py-3 px-3 text-center font-medium text-[var(--color-skill-a)]">{aWins}</td>
+                                                            <td className="py-3 px-3 text-center font-medium text-[var(--color-skill-b)]">{bWins}</td>
                                                             <td className="py-3 px-3 text-center text-[var(--color-text-muted)]">{ties}</td>
                                                             <td className="py-3 px-3 text-center text-[var(--color-text-secondary)]">{avgA}/5</td>
                                                             <td className="py-3 px-3 text-center text-[var(--color-text-secondary)]">{avgB}/5</td>
-                                                            <td className={`py-3 px-3 text-center font-bold ${leader === 'A' ? 'text-blue-500' : leader === 'B' ? 'text-orange-500' : ''}`}>
+                                                            <td className={`py-3 px-3 text-center font-bold ${leader === 'A' ? 'text-[var(--color-skill-a)]' : leader === 'B' ? 'text-[var(--color-skill-b)]' : ''}`}>
                                                                 {leader}
                                                             </td>
                                                         </tr>
@@ -655,31 +655,31 @@ function EvaluateView() {
                                                     return (
                                                         <React.Fragment key={ev.id}>
                                                             {/* Row A */}
-                                                            <tr className={`border-b border-[var(--color-border)]/50 ${scores.winner === 'A' ? 'bg-blue-500/5' : ''}`}>
+                                                            <tr className={`border-b border-[var(--color-border)]/50 ${scores.winner === 'A' ? 'bg-[var(--color-info-subtle)]' : ''}`}>
                                                                 <td rowSpan={2} className="text-center py-2 px-2 border-r border-[var(--color-border)] font-medium">{ev.id}</td>
                                                                 {config.criteria.map(c => {
                                                                     const score = scores.breakdown?.[c.id]?.A || 0;
                                                                     const bScore = scores.breakdown?.[c.id]?.B || 0;
                                                                     const isWinner = score > bScore;
                                                                     return (
-                                                                        <td key={c.id} className={`text-center py-2 px-2 ${isWinner ? 'bg-blue-500/20 font-medium' : ''}`}>
+                                                                        <td key={c.id} className={`text-center py-2 px-2 ${isWinner ? 'bg-[var(--color-info-subtle)] font-medium text-[var(--color-skill-a)]' : ''}`}>
                                                                             {score}
                                                                         </td>
                                                                     );
                                                                 })}
                                                                 <td className="text-center py-2 px-2 font-medium">{scores.scoreA}/{maxScore}</td>
-                                                                <td rowSpan={2} className={`text-center py-2 px-2 border-l border-[var(--color-border)] font-bold text-lg ${scores.winner === 'A' ? 'bg-blue-500/10 text-blue-600' : scores.winner === 'B' ? 'bg-orange-500/10 text-orange-600' : 'bg-gray-100'}`}>
+                                                                <td rowSpan={2} className={`text-center py-2 px-2 border-l border-[var(--color-border)] font-bold text-lg ${scores.winner === 'A' ? 'bg-[var(--color-info-subtle)] text-[var(--color-skill-a)]' : scores.winner === 'B' ? 'bg-[var(--color-warning-subtle)] text-[var(--color-skill-b)]' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-tie)]'}`}>
                                                                     {scores.winner === 'A' ? 'A' : scores.winner === 'B' ? 'B' : 'TIE'}
                                                                 </td>
                                                             </tr>
                                                             {/* Row B */}
-                                                            <tr className={`border-b border-[var(--color-border)] ${scores.winner === 'B' ? 'bg-orange-500/5' : ''}`}>
+                                                            <tr className={`border-b border-[var(--color-border)] ${scores.winner === 'B' ? 'bg-[var(--color-warning-subtle)]' : ''}`}>
                                                                 {config.criteria.map(c => {
                                                                     const score = scores.breakdown?.[c.id]?.B || 0;
                                                                     const aScore = scores.breakdown?.[c.id]?.A || 0;
                                                                     const isWinner = score > aScore;
                                                                     return (
-                                                                        <td key={c.id} className={`text-center py-2 px-2 ${isWinner ? 'bg-orange-500/20 font-medium' : ''}`}>
+                                                                        <td key={c.id} className={`text-center py-2 px-2 ${isWinner ? 'bg-[var(--color-warning-subtle)] font-medium text-[var(--color-skill-b)]' : ''}`}>
                                                                             {score}
                                                                         </td>
                                                                     );
@@ -723,7 +723,7 @@ function EvaluateView() {
                                                         Result A ({config.skillA.filename || 'Skill A'})
                                                     </h3>
                                                     {ev.judge.scores?.winner === 'A' && (
-                                                        <Trophy size={14} className="text-blue-500" />
+                                                        <Trophy size={14} className="text-[var(--color-skill-a)]" />
                                                     )}
                                                 </div>
                                                 <div className="bg-[var(--color-bg-tertiary)] p-3 rounded-lg text-xs font-mono max-h-64 overflow-auto whitespace-pre-wrap">
@@ -742,7 +742,7 @@ function EvaluateView() {
                                                         Result B ({config.skillB.filename || 'Skill B'})
                                                     </h3>
                                                     {ev.judge.scores?.winner === 'B' && (
-                                                        <Trophy size={14} className="text-orange-500" />
+                                                        <Trophy size={14} className="text-[var(--color-skill-b)]" />
                                                     )}
                                                 </div>
                                                 <div className="bg-[var(--color-bg-tertiary)] p-3 rounded-lg text-xs font-mono max-h-64 overflow-auto whitespace-pre-wrap">

@@ -1,10 +1,10 @@
 const variants = {
-    default: 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]',
-    success: 'bg-[rgba(123,158,127,0.2)] text-[#9BC49F]',
-    warning: 'bg-[rgba(212,168,83,0.2)] text-[#E8B84A]',
-    error: 'bg-[rgba(196,92,62,0.2)] text-[#E07050]',
-    info: 'bg-[rgba(122,155,190,0.2)] text-[#9ABADE]',
-    accent: 'bg-[var(--color-accent-subtle)] text-[#E8886A]',
+    default: 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] border-[var(--color-border)]',
+    success: 'bg-[var(--color-success-subtle)] text-[var(--color-success)] border-[var(--color-success)]',
+    warning: 'bg-[var(--color-warning-subtle)] text-[var(--color-warning)] border-[var(--color-warning)]',
+    error: 'bg-[var(--color-error-subtle)] text-[var(--color-error)] border-[var(--color-error)]',
+    info: 'bg-[var(--color-info-subtle)] text-[var(--color-info)] border-[var(--color-info)]',
+    accent: 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border-[var(--color-border)]',
 }
 
 const sizes = {
@@ -23,7 +23,7 @@ function Badge({
     return (
         <span
             className={`
-                inline-flex items-center font-medium rounded-md
+                inline-flex items-center font-medium rounded-[var(--radius-sm)] border
                 ${variants[variant]}
                 ${sizes[size]}
                 ${className}

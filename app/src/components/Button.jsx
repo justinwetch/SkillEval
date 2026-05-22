@@ -2,8 +2,8 @@ import { forwardRef } from 'react'
 
 const variants = {
   primary: {
-    base: 'bg-[var(--color-accent)] text-[#FFFFFF] shadow-md shadow-[var(--color-accent)]/20',
-    hover: 'hover:bg-[var(--color-accent-hover)] hover:shadow-lg hover:shadow-[var(--color-accent)]/25',
+    base: 'bg-[var(--color-accent)] text-[var(--color-on-accent)] shadow-[var(--shadow-sm)] border border-[var(--color-accent)]',
+    hover: 'hover:bg-[var(--color-accent-hover)] hover:border-[var(--color-accent-hover)] hover:shadow-[var(--shadow-md)]',
   },
   secondary: {
     base: 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-[var(--color-border)]',
@@ -14,15 +14,15 @@ const variants = {
     hover: 'hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]',
   },
   danger: {
-    base: 'bg-[var(--color-error)] text-[#FFFFFF] shadow-md shadow-[var(--color-error)]/20',
-    hover: 'hover:opacity-90 hover:shadow-lg hover:shadow-[var(--color-error)]/25',
+    base: 'bg-[var(--color-error)] text-[var(--color-on-danger)] shadow-[var(--shadow-sm)] border border-[var(--color-error)]',
+    hover: 'hover:opacity-90 hover:shadow-[var(--shadow-md)]',
   },
 }
 
 const sizes = {
-  sm: 'px-3 py-1.5 text-[13px] gap-1.5 rounded-lg',
-  md: 'px-4 py-2 text-sm gap-2 rounded-lg',
-  lg: 'px-5 py-2.5 text-[15px] gap-2 rounded-lg',
+  sm: 'px-3 py-1.5 text-[13px] gap-1.5 rounded-[var(--radius-sm)]',
+  md: 'px-4 py-2 text-sm gap-2 rounded-[var(--radius-sm)]',
+  lg: 'px-5 py-2.5 text-[15px] gap-2 rounded-[var(--radius-md)]',
 }
 
 const Button = forwardRef(({
@@ -35,13 +35,6 @@ const Button = forwardRef(({
   ...props
 }, ref) => {
   const variantStyles = variants[variant] || variants.primary
-
-  // Determine text color based on variant
-  const getTextColor = () => {
-    if (variant === 'primary' || variant === 'danger') return '#FFFFFF'
-    if (variant === 'ghost') return 'var(--color-text-secondary)'
-    return 'var(--color-text-primary)'
-  }
 
   return (
     <button
@@ -57,7 +50,6 @@ const Button = forwardRef(({
         ${sizes[size]}
         ${className}
       `}
-      style={{ color: getTextColor() }}
       {...props}
     >
       {loading && (

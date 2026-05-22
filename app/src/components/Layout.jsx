@@ -19,8 +19,8 @@ function Layout() {
                 <div className="max-w-5xl mx-auto px-8 h-16 flex items-center justify-center relative">
                     {/* Logo - Positioned Left */}
                     <NavLink to="/" className="absolute left-8 flex items-center gap-3 hover:opacity-80 transition-opacity">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-accent)] to-[#B85D3F] flex items-center justify-center shadow-lg shadow-[var(--color-accent)]/20">
-                            <FlaskConical size={18} strokeWidth={2} className="text-white" />
+                        <div className="w-9 h-9 rounded-[var(--radius-md)] bg-[var(--color-accent)] text-[var(--color-on-accent)] flex items-center justify-center shadow-[var(--shadow-sm)]">
+                            <FlaskConical size={18} strokeWidth={2} />
                         </div>
                         <span className="text-lg font-semibold text-[var(--color-text-primary)] tracking-tight">
                             Skill Evaluator
@@ -38,7 +38,7 @@ function Layout() {
                                     className={({ isActive }) => `
                                         flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
                                         ${isActive
-                                            ? 'bg-[var(--color-accent)] text-[#FFFFFF]'
+                                            ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)] shadow-[var(--shadow-sm)]'
                                             : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'
                                         }
                                     `}
@@ -53,7 +53,7 @@ function Layout() {
                     {/* Theme Toggle - Positioned Right */}
                     <button
                         onClick={toggleTheme}
-                        className="absolute right-8 w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-elevated)] transition-all"
+                        className="absolute right-8 w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-elevated)] transition-all"
                         aria-label={`Switch to ${settings.theme === 'dark' ? 'light' : 'dark'} mode`}
                     >
                         {settings.theme === 'dark' ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}

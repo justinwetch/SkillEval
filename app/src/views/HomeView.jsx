@@ -130,7 +130,7 @@ function HomeView() {
                                 className="p-8 h-full flex flex-col transition-transform duration-200 group-hover:-translate-y-1"
                             >
                                 <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-11 h-11 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-white text-lg font-semibold shadow-lg shadow-[var(--color-accent)]/20">
+                                    <div className="w-11 h-11 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-[var(--color-on-accent)] text-lg font-semibold shadow-[var(--shadow-sm)]">
                                         {step}
                                     </div>
                                     <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">

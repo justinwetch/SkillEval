@@ -12,27 +12,59 @@ GUI by [Justin Wetch](https://github.com/justinwetch)
 
 ---
 
+## v1.1 Update
+
+Skill Evaluator v1.1 adds support for the latest Anthropic, OpenAI, and Google models, expanding the app beyond Anthropic-only workflows. Model selection now supports provider-specific API keys, cross-provider choices, and separate defaults for skill output generation and judge scoring.
+
+This release also introduces a refreshed design language, with cleaner surfaces, tighter controls, restrained depth, and fully considered light and dark modes.
+
+---
+
 ## Using the GUI
 
 **Configure** — Upload two skill files (A and B) and set up your evaluation. Click the ✨ Generate button to have AI analyze your skills and create appropriate evaluation criteria and test prompts automatically. Choose your output type (text, visual, or both) based on what your skills produce.
 
-![Configure - Upload skills and generate criteria](screenshots/configure%201.png)
+Light:
+![Configure - Upload skills and generate criteria in light mode](screenshots/configure%201.png)
 
-![Configure - Generated criteria and prompts](screenshots/configure%202.png)
+Dark:
+![Configure - Upload skills and generate criteria in dark mode](screenshots/dark/configure%201.png)
+
+Light:
+![Configure - Generated criteria and prompts in light mode](screenshots/configure%202.png)
+
+Dark:
+![Configure - Generated criteria and prompts in dark mode](screenshots/dark/configure%202.png)
 
 **Evaluate** — Select your model and run all prompts through both skills simultaneously. Each prompt generates two outputs (one from Skill A, one from Skill B) which you can compare side-by-side. The status badges show progress in real-time.
 
-![Evaluate - Running prompts through both skills](screenshots/Evaluate%201.png)
+Light:
+![Evaluate - Running prompts through both skills in light mode](screenshots/Evaluate%201.png)
+
+Dark:
+![Evaluate - Running prompts through both skills in dark mode](screenshots/dark/Evaluate%201.png)
 
 **Results** — After generation, run the judge to score both outputs against your criteria. The summary view shows overall wins/losses, while the detailed breakdown reveals per-criterion scores and patterns.
 
-![Results - Summary view with wins and scores](screenshots/evaluate%20results.png)
+Light:
+![Results - Summary view with wins and scores in light mode](screenshots/evaluate%20results.png)
 
-![Results - Per-criterion breakdown](screenshots/evaluate%20results%202.png)
+Dark:
+![Results - Summary view with wins and scores in dark mode](screenshots/dark/evaluate%20results.png)
+
+Light:
+![Results - Per-criterion breakdown in light mode](screenshots/evaluate%20results%202.png)
+
+Dark:
+![Results - Per-criterion breakdown in dark mode](screenshots/dark/evaluate%20results%202.png)
 
 **Settings** — Manage provider keys for Anthropic, OpenAI, and Gemini, then set default models for configuration, generation, and judging.
 
-![Settings - provider keys and default models](screenshots/settings.png)
+Light:
+![Settings - provider keys and default models in light mode](screenshots/settings.png)
+
+Dark:
+![Settings - provider keys and default models in dark mode](screenshots/dark/settings.png)
 
 ---
 

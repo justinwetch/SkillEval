@@ -96,9 +96,9 @@ function SettingsView() {
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
                                         {hasKey ? (
-                                            <CheckCircle2 size={18} className="text-[#9BC49F] flex-shrink-0" />
+                                            <CheckCircle2 size={18} className="text-[var(--color-success)] flex-shrink-0" />
                                         ) : (
-                                            <AlertCircle size={18} className="text-[#E8B84A] flex-shrink-0" />
+                                            <AlertCircle size={18} className="text-[var(--color-warning)] flex-shrink-0" />
                                         )}
                                         <div className="min-w-0">
                                             <p className="text-sm font-semibold text-[var(--color-text-primary)]">

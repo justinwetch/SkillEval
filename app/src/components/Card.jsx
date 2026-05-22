@@ -25,10 +25,11 @@ const Card = forwardRef(({
             className={`
         bg-[var(--color-bg-secondary)]
         border border-[var(--color-border)]
-        rounded-xl
+        rounded-[var(--radius-lg)]
+        shadow-[var(--shadow-sm)]
         transition-all duration-200
         ${paddingStyles[padding]}
-        ${interactive || onClick ? 'cursor-pointer hover:bg-[var(--color-bg-tertiary)] hover:border-[var(--color-border-hover)]' : 'hover:border-[var(--color-border-hover)]'}
+        ${interactive || onClick ? 'cursor-pointer hover:bg-[var(--color-bg-tertiary)] hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-md)]' : 'hover:border-[var(--color-border-hover)]'}
         ${accent ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]' : ''}
         ${onClick ? 'text-left w-full' : ''}
         ${className}

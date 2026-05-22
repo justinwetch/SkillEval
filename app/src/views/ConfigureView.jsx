@@ -146,10 +146,10 @@ function ConfigureView() {
             <Card padding="none" className="p-6 mb-4">
                 <div className="flex items-start gap-4">
                     <div className={`
-                        w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0
+                        w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center text-sm font-semibold flex-shrink-0
                         ${modelAccessComplete
                             ? 'bg-[var(--color-success)] text-[#FFFFFF]'
-                            : 'bg-[var(--color-accent)] text-[#FFFFFF]'
+                            : 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
                         }
                     `}>
                         {modelAccessComplete ? <Check size={16} strokeWidth={2.5} /> : '1'}
@@ -202,10 +202,10 @@ function ConfigureView() {
             <Card padding="none" className="p-6 mb-4">
                 <div className="flex items-start gap-4 mb-6">
                     <div className={`
-                        w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0
+                        w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center text-sm font-semibold flex-shrink-0
                         ${skillsComplete
                             ? 'bg-[var(--color-success)] text-[#FFFFFF]'
-                            : 'bg-[var(--color-accent)] text-[#FFFFFF]'
+                            : 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
                         }
                     `}>
                         {skillsComplete ? <Check size={16} strokeWidth={2.5} /> : '2'}
@@ -290,11 +290,11 @@ function ConfigureView() {
             <Card padding="none" className={`p-6 mb-4 ${!skillsComplete ? 'opacity-50' : ''}`}>
                 <div className="flex items-start gap-4 mb-6">
                     <div className={`
-                        w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0
+                        w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center text-sm font-semibold flex-shrink-0
                         ${configComplete
                             ? 'bg-[var(--color-success)] text-[#FFFFFF]'
                             : skillsComplete
-                                ? 'bg-[var(--color-accent)] text-[#FFFFFF]'
+                                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
                                 : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'
                         }
                     `}>
@@ -369,7 +369,7 @@ function ConfigureView() {
                                 className={`
                                     px-4 py-2 rounded-lg text-sm font-medium transition-all
                                     ${config.outputType === type
-                                        ? 'bg-[var(--color-accent)] text-white'
+                                        ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
                                         : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)]'
                                     }
                                 `}

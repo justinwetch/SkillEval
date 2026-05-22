@@ -1,6 +1,6 @@
 /* 
  * Skill Evaluator Design System
- * Based on Bloom GUI - Warm aesthetic with semantic color usage
+ * Portfolio-inspired graphite language with equal light/dark treatment
  */
 
 @import "tailwindcss";
@@ -9,39 +9,50 @@
    THEME VARIABLES - Dark Mode (Default)
    ======================================== */
 :root {
-  /* Base Colors - Warm Charcoal Dark Theme */
-  --color-bg-primary: #1C1B18;
-  --color-bg-secondary: #262520;
-  --color-bg-tertiary: #32302B;
-  --color-bg-elevated: #3A3835;
+  /* Base Colors - Graphite Dark Theme */
+  --color-bg-primary: #161617;
+  --color-bg-secondary: #1D1D1F;
+  --color-bg-tertiary: #242426;
+  --color-bg-elevated: #2C2C2E;
+  --color-bg-overlay: rgba(22, 22, 23, 0.88);
 
-  /* Text Colors - Warm Tones */
-  --color-text-primary: #F5F4F2;
-  --color-text-secondary: #B8B5AD;
-  --color-text-muted: #8A867D;
+  /* Text Colors */
+  --color-text-primary: #F5F5F7;
+  --color-text-secondary: #D1D1D6;
+  --color-text-muted: #98989D;
 
-  /* Accent Colors - Coral/Terracotta */
-  --color-accent: #DA7756;
-  --color-accent-hover: #E8886A;
-  --color-accent-subtle: rgba(218, 119, 86, 0.15);
+  /* Primary Action */
+  --color-accent: #F5F5F7;
+  --color-accent-hover: #FFFFFF;
+  --color-accent-subtle: rgba(245, 245, 247, 0.10);
+  --color-on-accent: #161617;
 
-  /* Status Colors - Warmer variants */
-  --color-success: #7B9E7F;
-  --color-warning: #D4A853;
-  --color-error: #C45C3E;
-  --color-info: #7A9BBE;
+  /* Status Colors */
+  --color-success: #76A77C;
+  --color-warning: #D6A84F;
+  --color-error: #D06A4B;
+  --color-info: #7FA7C9;
+  --color-success-subtle: rgba(118, 167, 124, 0.16);
+  --color-warning-subtle: rgba(214, 168, 79, 0.18);
+  --color-error-subtle: rgba(208, 106, 75, 0.16);
+  --color-info-subtle: rgba(127, 167, 201, 0.16);
+  --color-on-warning: #2A2112;
+  --color-on-danger: #FFFFFF;
+  --color-skill-a: #7FA7C9;
+  --color-skill-b: #D39A5F;
+  --color-tie: #98989D;
 
-  /* Borders - Warm tones */
-  --color-border: #3D3A35;
-  --color-border-hover: #524F48;
+  /* Borders */
+  --color-border: #3A3A3C;
+  --color-border-hover: #545458;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.36);
 
   /* Typography */
-  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
 
   /* Spacing Scale */
   --space-xs: 0.5rem;
@@ -53,10 +64,10 @@
   --space-3xl: 4rem;
 
   /* Border Radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 }
 
@@ -64,25 +75,40 @@
    LIGHT MODE OVERRIDES
    ======================================== */
 [data-theme="light"] {
-  --color-bg-primary: #FAF9F7;
+  --color-bg-primary: #F5F5F7;
   --color-bg-secondary: #FFFFFF;
-  --color-bg-tertiary: #F0EDE8;
+  --color-bg-tertiary: #EFEFF2;
   --color-bg-elevated: #FFFFFF;
+  --color-bg-overlay: rgba(245, 245, 247, 0.90);
 
-  --color-text-primary: #1A1915;
-  --color-text-secondary: #524E45;
-  --color-text-muted: #7A766C;
+  --color-text-primary: #1D1D1F;
+  --color-text-secondary: #424245;
+  --color-text-muted: #86868B;
 
-  --color-accent: #E07830;
-  --color-accent-hover: #D06820;
-  --color-accent-subtle: rgba(224, 120, 48, 0.12);
+  --color-accent: #1D1D1F;
+  --color-accent-hover: #424245;
+  --color-accent-subtle: rgba(29, 29, 31, 0.08);
+  --color-on-accent: #FFFFFF;
 
-  --color-border: #D5D0C6;
-  --color-border-hover: #B8B3A8;
+  --color-success: #4E8F57;
+  --color-warning: #A87316;
+  --color-error: #B55235;
+  --color-info: #4D7EA8;
+  --color-success-subtle: rgba(78, 143, 87, 0.12);
+  --color-warning-subtle: rgba(168, 115, 22, 0.14);
+  --color-error-subtle: rgba(181, 82, 53, 0.12);
+  --color-info-subtle: rgba(77, 126, 168, 0.12);
+  --color-on-warning: #2D220F;
+  --color-skill-a: #3D78A3;
+  --color-skill-b: #A86E33;
+  --color-tie: #86868B;
+
+  --color-border: #D2D2D7;
+  --color-border-hover: #B8B8BD;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10), 0 2px 4px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.10), 0 1px 4px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 32px rgba(0, 0, 0, 0.14), 0 3px 10px rgba(0, 0, 0, 0.06);
 }
 
 /* ========================================
@@ -105,7 +131,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
 }
 
 #root {
@@ -121,7 +159,7 @@ h3 {
   font-family: var(--font-sans);
   font-weight: 600;
   line-height: 1.3;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   margin: 0;
 }
 
@@ -246,15 +284,15 @@ a:hover {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.24s ease-out;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.4s ease-out;
+  animation: slideUp 0.28s ease-out;
 }
 
 .animate-slide-down {
-  animation: slideDown 0.4s ease-out;
+  animation: slideDown 0.28s ease-out;
 }
 
 .animate-pulse {
@@ -307,16 +345,25 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
 
 select {
   padding-right: 2.5rem;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238A867D'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3e%3c/svg%3e");
+  background-image: var(--select-chevron);
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 1rem;
   appearance: none;
   cursor: pointer;
+}
+
+:root {
+  --select-chevron: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2398989D'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3e%3c/svg%3e");
+}
+
+[data-theme="light"] {
+  --select-chevron: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2386868B'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3e%3c/svg%3e");
 }
 
 /* Custom Checkbox */
@@ -397,13 +444,59 @@ input[type="checkbox"]:checked::after {
   background-color: var(--color-bg-tertiary);
 }
 
-/* Glass Effect */
-.glass {
-  background: rgba(28, 27, 24, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* Tailwind v4 can treat text-[var(...)] as an ambiguous text-size token.
+   These selectors keep existing JSX class names color-token driven. */
+.text-\[var\(--color-text-primary\)\] {
+  color: var(--color-text-primary);
 }
 
-[data-theme="light"] .glass {
-  background: rgba(250, 249, 247, 0.9);
+.text-\[var\(--color-text-secondary\)\] {
+  color: var(--color-text-secondary);
+}
+
+.text-\[var\(--color-text-muted\)\] {
+  color: var(--color-text-muted);
+}
+
+.text-\[var\(--color-accent\)\] {
+  color: var(--color-accent);
+}
+
+.text-\[var\(--color-on-accent\)\] {
+  color: var(--color-on-accent);
+}
+
+.text-\[var\(--color-success\)\] {
+  color: var(--color-success);
+}
+
+.text-\[var\(--color-warning\)\] {
+  color: var(--color-warning);
+}
+
+.text-\[var\(--color-error\)\] {
+  color: var(--color-error);
+}
+
+.text-\[var\(--color-info\)\] {
+  color: var(--color-info);
+}
+
+.text-\[var\(--color-skill-a\)\] {
+  color: var(--color-skill-a);
+}
+
+.text-\[var\(--color-skill-b\)\] {
+  color: var(--color-skill-b);
+}
+
+.text-\[var\(--color-tie\)\] {
+  color: var(--color-tie);
+}
+
+/* Glass Effect */
+.glass {
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
