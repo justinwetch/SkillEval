@@ -8,10 +8,6 @@ I built this to improve Anthropic's frontend design skill and prove the improvem
 
 For the full story on how this started and why data-driven skill development matters, see [Teaching Claude to Design Better](https://www.justinwetch.com/blog/improvingclaudefrontend).
 
-This project is a spiritual successor to my work on [Bloom GUI](https://github.com/justinwetch/bloom), a visual interface for Anthropic's behavioral evaluation framework. Building that taught me a lot about what makes evaluations useful—clear metrics, comparative analysis, and good visualization. I brought that learning (and the design language I developed there) into Skill Evaluator.
-
-GUI by [Justin Wetch](https://github.com/justinwetch)
-
 ---
 
 ## v1.1 Update
@@ -182,7 +178,5 @@ MIT
 ---
 
 ## Credits
-
-Thanks to Anthropic for the Skills framework and Claude models.
 
 Built by [Justin Wetch](https://www.justinwetch.com)
