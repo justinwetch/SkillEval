@@ -30,9 +30,9 @@ GUI by [Justin Wetch](https://github.com/justinwetch)
 
 ![Results - Per-criterion breakdown](screenshots/evaluate%20results%202.png)
 
-**Settings** — Configure your Anthropic API key and set default models for generation and judging. Models can be overridden per-evaluation.
+**Settings** — Manage provider keys for Anthropic, OpenAI, and Gemini, then set default models for configuration, generation, and judging.
 
-![Settings - API key and default models](screenshots/settings.png)
+![Settings - provider keys and default models](screenshots/settings.png)
 
 ---
 
@@ -41,7 +41,10 @@ GUI by [Justin Wetch](https://github.com/justinwetch)
 ### Prerequisites
 
 - Node.js 18+
-- Anthropic API key ([get one here](https://console.anthropic.com/))
+- Provider key for at least one supported provider:
+  - Anthropic ([console.anthropic.com](https://console.anthropic.com/))
+  - OpenAI ([platform.openai.com](https://platform.openai.com/api-keys))
+  - Gemini ([aistudio.google.com](https://aistudio.google.com/app/apikey))
 
 ### Clone and Setup
 
@@ -61,28 +64,31 @@ Open **http://localhost:5173** in your browser.
 
 ### Running an Evaluation
 
-1. Go to **Settings** and add your Anthropic API key
-2. Go to **Configure** and upload two skill files
-3. Click **Generate All from Skills** to auto-generate criteria and prompts
-4. Go to **Evaluate** and click **Run All Evals**
-5. Once generation completes, click **Judge All** to score the outputs
-6. Review the results in Summary and Detailed Breakdown tabs
+1. Go to **Configure** and choose the Output model and Judge model
+2. If a selected model needs provider access, click its **Add Key** action to open the right Settings panel
+3. Upload two skill files
+4. Click **Generate All from Skills** to auto-generate criteria and prompts
+5. Go to **Evaluate** and click **Run All Evals**
+6. Once generation completes, click **Judge All** to score the outputs
+7. Review the results in Summary and Detailed Breakdown tabs
 
 ---
 
 ## Model Selection
 
-Choose which model to evaluate your skills with. Different models may respond differently to the same skill instructions, so pick the one most relevant to your use case.
+Choose models deliberately for the two major phases. The Output model runs both skills, while the Judge model generates criteria/prompts and scores the results.
 
-| Model | Characteristics |
-|-------|-----------------|
-| **Sonnet 4.6** | Balanced capability and speed (default) |
-| **Opus 4.6** | Most capable, highest quality outputs (default judge) |
-| **Haiku 4.5** | Fast, cost-effective, good for iteration |
-| **Sonnet 4.5** | Legacy, still available |
-| **Opus 4.5** | Legacy, still available |
+| Model | Provider | Characteristics |
+|-------|----------|-----------------|
+| **Claude Sonnet 4.6** | Anthropic | Balanced capability and speed (default output generation) |
+| **Claude Opus 4.7** | Anthropic | Strong model for criteria, prompts, and judging (default judge) |
+| **Claude Haiku 4.5** | Anthropic | Fast, cost-effective, good for iteration |
+| **GPT-5.5** | OpenAI | Frontier model for complex reasoning and coding |
+| **GPT-5.4 Mini / Nano** | OpenAI | Lower-latency, lower-cost OpenAI options |
+| **Gemini 3.5 Flash** | Gemini | Stable Gemini model for sustained coding and agentic tasks |
+| **Gemini 3.1 Pro Preview** | Gemini | Advanced Gemini Pro option |
 
-For judging, **Opus 4.6** is recommended since it's the most capable model and provides the most nuanced scoring. Sonnet 4.6 is the default for generation. The 4.5 models remain available for comparison or cost-sensitive workflows.
+For judging, **Claude Opus 4.7** is the default because strong reasoning is useful for criteria, prompts, and nuanced scoring. Claude Sonnet 4.6 is the default for skill output generation. OpenAI and Gemini models are available in the same selectors when their provider keys are configured.
 
 ---
 

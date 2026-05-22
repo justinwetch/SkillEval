@@ -1,25 +1,29 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Trash2, Key, Cpu } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Cpu, Eye, EyeOff, Key, Trash2 } from 'lucide-react'
 import { useSettings } from '../contexts/SettingsContext'
-import Card from '../components/Card'
+import Badge from '../components/Badge'
 import Button from '../components/Button'
-
-const MODELS = [
-    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', speed: 'Fast' },
-    { value: 'claude-sonnet-4-6-20260217', label: 'Claude Sonnet 4.6', speed: 'Balanced' },
-    { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', speed: 'Balanced (Legacy)' },
-    { value: 'claude-opus-4-6-20260205', label: 'Claude Opus 4.6', speed: 'Powerful' },
-    { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5', speed: 'Powerful (Legacy)' },
-]
+import Card from '../components/Card'
+import { getModelsByProvider, PROVIDERS } from '../utils/providers'
 
 function SettingsView() {
+    const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     const {
         settings,
         setApiKey,
         updateSetting,
     } = useSettings()
 
-    const [showApiKey, setShowApiKey] = useState(false)
+    const requestedProvider = searchParams.get('provider')
+    const [showApiKeys, setShowApiKeys] = useState({})
+    const [expandedProvider, setExpandedProvider] = useState(() => (
+        PROVIDERS[requestedProvider] ? requestedProvider : null
+    ))
+    const [draftApiKeys, setDraftApiKeys] = useState(settings.apiKeys || {})
+    const modelGroups = getModelsByProvider()
+    const returnTo = searchParams.get('returnTo')
 
     const handleClearData = () => {
         if (window.confirm('Are you sure you want to clear all saved data? This cannot be undone.')) {
@@ -28,19 +32,37 @@ function SettingsView() {
         }
     }
 
+    const handleSaveKey = (providerId) => {
+        setApiKey(providerId, draftApiKeys[providerId] || '')
+        if (returnTo) {
+            navigate(returnTo)
+        }
+    }
+
+    const handleRemoveKey = (providerId) => {
+        setDraftApiKeys(prev => ({ ...prev, [providerId]: '' }))
+        setApiKey(providerId, '')
+    }
+
+    const renderModelOptions = () => modelGroups.map(({ provider, models }) => (
+        <optgroup key={provider.id} label={provider.label}>
+            {models.map(model => (
+                <option key={model.value} value={model.value}>{model.label}</option>
+            ))}
+        </optgroup>
+    ))
+
     return (
         <div className="animate-fade-in max-w-2xl mx-auto">
-            {/* Header */}
             <div className="mb-10">
                 <h1 className="text-3xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-3">
                     Settings
                 </h1>
                 <p className="text-[var(--color-text-secondary)] text-lg leading-relaxed">
-                    Configure your API key and default preferences
+                    Manage provider keys and default model preferences
                 </p>
             </div>
 
-            {/* API Key Section */}
             <Card padding="none" className="p-8 mb-6">
                 <div className="flex items-start gap-5 mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-[var(--color-accent-subtle)] flex items-center justify-center text-[var(--color-accent)] flex-shrink-0">
@@ -48,47 +70,114 @@ function SettingsView() {
                     </div>
                     <div className="flex-1 min-w-0">
                         <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-1">
-                            API Key
+                            Provider Keys
                         </h2>
                         <p className="text-sm text-[var(--color-text-muted)]">
-                            Required — stored locally in your browser
+                            Add keys only for the providers you plan to use
                         </p>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <div className="relative">
-                        <input
-                            type={showApiKey ? 'text' : 'password'}
-                            value={settings.apiKey}
-                            onChange={(e) => setApiKey(e.target.value)}
-                            placeholder="sk-ant-api03-..."
-                            className="w-full pr-12 font-mono text-sm"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowApiKey(!showApiKey)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded-lg hover:bg-[var(--color-bg-elevated)]"
-                        >
-                            {showApiKey ? <EyeOff size={18} strokeWidth={1.5} /> : <Eye size={18} strokeWidth={1.5} />}
-                        </button>
-                    </div>
+                <div className="space-y-3">
+                    {Object.values(PROVIDERS).map(provider => {
+                        const hasKey = !!settings.apiKeys?.[provider.id]
+                        const isVisible = !!showApiKeys[provider.id]
+                        const isExpanded = expandedProvider === provider.id
 
-                    <span className="text-sm text-[var(--color-text-muted)]">
-                        Get your key from{' '}
-                        <a
-                            href="https://console.anthropic.com/settings/keys"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[var(--color-accent)] hover:underline"
-                        >
-                            console.anthropic.com
-                        </a>
-                    </span>
+                        return (
+                            <div
+                                key={provider.id}
+                                className="border border-[var(--color-border)] rounded-lg bg-[var(--color-bg-tertiary)] overflow-hidden"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => setExpandedProvider(isExpanded ? null : provider.id)}
+                                    className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-[var(--color-bg-elevated)] transition-colors"
+                                >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        {hasKey ? (
+                                            <CheckCircle2 size={18} className="text-[#9BC49F] flex-shrink-0" />
+                                        ) : (
+                                            <AlertCircle size={18} className="text-[#E8B84A] flex-shrink-0" />
+                                        )}
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                                                {provider.label}
+                                            </p>
+                                            <p className="text-xs text-[var(--color-text-muted)]">
+                                                {hasKey ? 'Key saved locally' : 'No key saved'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Badge variant={hasKey ? 'success' : 'warning'}>
+                                            {hasKey ? 'Connected' : 'Not connected'}
+                                        </Badge>
+                                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    </div>
+                                </button>
+
+                                {isExpanded && (
+                                    <div className="border-t border-[var(--color-border)] p-4 bg-[var(--color-bg-secondary)]">
+                                        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2.5">
+                                            {provider.keyLabel}
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type={isVisible ? 'text' : 'password'}
+                                                value={draftApiKeys[provider.id] || ''}
+                                                onChange={(e) => setDraftApiKeys(prev => ({ ...prev, [provider.id]: e.target.value }))}
+                                                placeholder={provider.keyPlaceholder}
+                                                className="w-full pr-12 font-mono text-sm"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowApiKeys(prev => ({ ...prev, [provider.id]: !isVisible }))}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded-lg hover:bg-[var(--color-bg-elevated)]"
+                                                aria-label={`${isVisible ? 'Hide' : 'Show'} ${provider.label} API key`}
+                                            >
+                                                {isVisible ? <EyeOff size={18} strokeWidth={1.5} /> : <Eye size={18} strokeWidth={1.5} />}
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-4 mt-3">
+                                            <span className="text-sm text-[var(--color-text-muted)]">
+                                                Get your key from{' '}
+                                                <a
+                                                    href={provider.keyUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-[var(--color-accent)] hover:underline"
+                                                >
+                                                    {provider.keyHost}
+                                                </a>
+                                            </span>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                {hasKey && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleRemoveKey(provider.id)}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => handleSaveKey(provider.id)}
+                                                    disabled={!draftApiKeys[provider.id]?.trim()}
+                                                >
+                                                    {returnTo ? 'Save and Return' : 'Save Key'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
                 </div>
             </Card>
 
-            {/* Model Defaults Section */}
             <Card padding="none" className="p-8 mb-6">
                 <div className="flex items-start gap-5 mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-[var(--color-accent-subtle)] flex items-center justify-center text-[var(--color-accent)] flex-shrink-0">
@@ -99,7 +188,7 @@ function SettingsView() {
                             Default Models
                         </h2>
                         <p className="text-sm text-[var(--color-text-muted)]">
-                            Can be overridden per evaluation
+                            Configure can override these as part of setup
                         </p>
                     </div>
                 </div>
@@ -107,16 +196,14 @@ function SettingsView() {
                 <div className="grid grid-cols-2 gap-8">
                     <div>
                         <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2.5">
-                            Generation Model
+                            Output Model
                         </label>
                         <select
                             value={settings.defaultGenModel}
                             onChange={(e) => updateSetting('defaultGenModel', e.target.value)}
                             className="w-full"
                         >
-                            {MODELS.map(m => (
-                                <option key={m.value} value={m.value}>{m.label}</option>
-                            ))}
+                            {renderModelOptions()}
                         </select>
                         <p className="text-xs text-[var(--color-text-muted)] mt-2.5">
                             Used to generate outputs from skills
@@ -132,18 +219,15 @@ function SettingsView() {
                             onChange={(e) => updateSetting('defaultJudgeModel', e.target.value)}
                             className="w-full"
                         >
-                            {MODELS.map(m => (
-                                <option key={m.value} value={m.value}>{m.label}</option>
-                            ))}
+                            {renderModelOptions()}
                         </select>
                         <p className="text-xs text-[var(--color-text-muted)] mt-2.5">
-                            Used to evaluate and score outputs
+                            Used to generate criteria, prompts, and judgments
                         </p>
                     </div>
                 </div>
             </Card>
 
-            {/* Data Management Section */}
             <Card padding="none" className="p-8 border-[var(--color-error)]/20">
                 <div className="flex items-start gap-5 mb-6">
                     <div className="w-12 h-12 rounded-2xl bg-[rgba(196,92,62,0.12)] flex items-center justify-center text-[var(--color-error)] flex-shrink-0">

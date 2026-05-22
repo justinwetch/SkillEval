@@ -29,22 +29,25 @@ function Layout() {
 
                     {/* Navigation - Centered */}
                     <nav className="flex items-center gap-1">
-                        {navItems.map(({ path, label, icon: Icon }) => (
-                            <NavLink
-                                key={path}
-                                to={path}
-                                className={({ isActive }) => `
-                                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                                    ${isActive
-                                        ? 'bg-[var(--color-accent)] text-[#FFFFFF]'
-                                        : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'
-                                    }
-                                `}
-                            >
-                                <Icon size={16} strokeWidth={2} />
-                                {label}
-                            </NavLink>
-                        ))}
+                        {navItems.map((item) => {
+                            const Icon = item.icon
+                            return (
+                                <NavLink
+                                    key={item.path}
+                                    to={item.path}
+                                    className={({ isActive }) => `
+                                        flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
+                                        ${isActive
+                                            ? 'bg-[var(--color-accent)] text-[#FFFFFF]'
+                                            : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'
+                                        }
+                                    `}
+                                >
+                                    <Icon size={16} strokeWidth={2} />
+                                    {item.label}
+                                </NavLink>
+                            )
+                        })}
                     </nav>
 
                     {/* Theme Toggle - Positioned Right */}
@@ -58,7 +61,7 @@ function Layout() {
                 </div>
             </header>
 
-            {/* API Key Warning Banner */}
+            {/* Provider Key Warning Banner */}
             {needsApiKey && <ApiKeyWarning />}
 
             {/* Main Content */}

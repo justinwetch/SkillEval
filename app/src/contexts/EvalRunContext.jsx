@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Evaluation Run Context
  * Manages state for active evaluation runs (generation, judging, results)
@@ -8,13 +9,14 @@ import { runAllEvals } from '../utils/runEval';
 import { judgeAllEvals } from '../utils/judgeEval';
 import { useSettings } from './SettingsContext';
 import { useEvalConfig } from './EvalConfigContext';
+import { DEFAULT_GENERATION_MODEL, DEFAULT_JUDGE_MODEL, getModelLabel } from '../utils/providers';
 
 const EvalRunContext = createContext(null);
 
 const STORAGE_KEY = 'skill_eval_run_state';
 
 export function EvalRunProvider({ children }) {
-    const { settings } = useSettings();
+    const { settings, hasApiKeyForModel } = useSettings();
     const { config } = useEvalConfig();
 
     // Evaluation run state
@@ -61,8 +63,10 @@ export function EvalRunProvider({ children }) {
 
     // Run all generations
     const runGenerations = useCallback(async (model) => {
-        if (!settings.apiKey) {
-            setRunError('API key is required');
+        const selectedModel = model || settings.defaultGenModel || DEFAULT_GENERATION_MODEL;
+
+        if (!hasApiKeyForModel(selectedModel)) {
+            setRunError(`${getModelLabel(selectedModel)} provider key is required`);
             return false;
         }
 
@@ -71,16 +75,15 @@ export function EvalRunProvider({ children }) {
         setStartTime(Date.now());
         setEndTime(null);
 
-        // Initialize fresh evaluations
-        const freshEvals = initializeEvaluations();
+        initializeEvaluations();
 
         try {
             const results = await runAllEvals({
-                apiKey: settings.apiKey,
+                apiKeys: settings.apiKeys,
                 skillA: config.skillA,
                 skillB: config.skillB,
                 prompts: config.prompts,
-                model: model || settings.defaultGenModel || 'claude-sonnet-4-6-20260217',
+                model: selectedModel,
                 maxTokens: 8192,
                 onProgress: (p) => setProgress(p)
             });
@@ -96,26 +99,27 @@ export function EvalRunProvider({ children }) {
             setEndTime(Date.now());
             return false;
         }
-    }, [settings, config, initializeEvaluations, persistEvaluations]);
+    }, [settings, hasApiKeyForModel, config, initializeEvaluations, persistEvaluations]);
 
     // Run all judgments
     const runJudgments = useCallback(async (judgeModel) => {
-        if (!settings.apiKey) {
-            setRunError('API key is required');
+        const selectedJudgeModel = judgeModel || settings.defaultJudgeModel || DEFAULT_JUDGE_MODEL;
+
+        if (!hasApiKeyForModel(selectedJudgeModel)) {
+            setRunError(`${getModelLabel(selectedJudgeModel)} provider key is required`);
             return false;
         }
 
         setRunStatus('judging');
         setRunError(null);
-        const judgeStartTime = Date.now();
 
         try {
             const results = await judgeAllEvals({
-                apiKey: settings.apiKey,
+                apiKeys: settings.apiKeys,
                 evaluations: [...evaluations],
                 criteria: config.criteria,
                 outputType: config.outputType,
-                judgeModel: judgeModel || settings.defaultJudgeModel || 'claude-sonnet-4-6-20260217',
+                judgeModel: selectedJudgeModel,
                 skillNames: {
                     skillA: config.skillA.filename || 'Skill A',
                     skillB: config.skillB.filename || 'Skill B'
@@ -133,7 +137,7 @@ export function EvalRunProvider({ children }) {
             setRunStatus('idle');
             return false;
         }
-    }, [settings, config, evaluations, persistEvaluations]);
+    }, [settings, hasApiKeyForModel, config, evaluations, persistEvaluations]);
 
     // Clear all run state
     const clearRunState = useCallback(() => {

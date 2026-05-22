@@ -13,28 +13,27 @@ import {
     Edit3,
     RefreshCw,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Key
 } from 'lucide-react'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
 import { useSettings } from '../contexts/SettingsContext'
 import { useEvalConfig } from '../contexts/EvalConfigContext'
+import { getModel, getModelProvider, getModelsByProvider, PROVIDERS } from '../utils/providers'
 
 function ConfigureView() {
     const navigate = useNavigate()
-    const { settings, setApiKey, needsApiKey } = useSettings()
+    const { settings, updateSetting, hasApiKeyForModel } = useSettings()
     const {
         config,
         isGenerating,
         generationError,
         setSkill,
         setOutputType,
-        setCriteria,
-        updateCriterion,
         removeCriterion,
         addCriterion,
-        setPrompts,
         updatePrompt,
         removePrompt,
         addPrompt,
@@ -46,19 +45,14 @@ function ConfigureView() {
         hasSkills
     } = useEvalConfig()
 
-    const [localApiKey, setLocalApiKey] = useState(settings.apiKey || '')
     const [expandedCriterion, setExpandedCriterion] = useState(null)
     const [editingPrompt, setEditingPrompt] = useState(null)
     const [newPromptText, setNewPromptText] = useState('')
     const [showAllPrompts, setShowAllPrompts] = useState(false)
+    const modelGroups = getModelsByProvider()
 
     const fileInputARef = useRef(null)
     const fileInputBRef = useRef(null)
-
-    // Handle API key save
-    const handleSaveApiKey = () => {
-        setApiKey(localApiKey)
-    }
 
     // Handle file upload
     const handleFileUpload = useCallback(async (side, file) => {
@@ -87,9 +81,51 @@ function ConfigureView() {
     }
 
     // Determine step completion
-    const apiKeyComplete = !needsApiKey
+    const modelAccessComplete = [
+        settings.defaultGenModel,
+        settings.defaultJudgeModel,
+    ].every(model => hasApiKeyForModel(model))
+    const judgeModelAccessComplete = hasApiKeyForModel(settings.defaultJudgeModel)
     const skillsComplete = hasSkills
     const configComplete = config.criteria.length > 0 && config.prompts.length > 0
+    const judgeProviderId = getModelProvider(settings.defaultJudgeModel)
+    const judgeProvider = PROVIDERS[judgeProviderId]
+    const judgeModel = getModel(settings.defaultJudgeModel)
+
+    const renderModelOptions = () => modelGroups.map(({ provider, models }) => (
+        <optgroup key={provider.id} label={provider.label}>
+            {models.map(model => (
+                <option key={model.value} value={model.value}>{model.label}</option>
+            ))}
+        </optgroup>
+    ))
+
+    const renderModelAccess = (model) => {
+        const providerId = getModelProvider(model)
+        const provider = PROVIDERS[providerId]
+        const hasKey = hasApiKeyForModel(model)
+
+        if (hasKey) {
+            return <Badge variant="success">{provider.label} connected</Badge>
+        }
+
+        return (
+            <div className="flex items-center gap-2">
+                <Badge variant="warning">{provider.label} key needed</Badge>
+                <Link
+                    to={`/settings?provider=${providerId}&returnTo=${encodeURIComponent('/configure')}`}
+                    className="inline-flex items-center gap-1.5 text-sm text-[var(--color-accent)] hover:underline"
+                >
+                    <Key size={14} strokeWidth={2} />
+                    Add {provider.label} Key
+                </Link>
+            </div>
+        )
+    }
+
+    const openProviderSettings = (providerId) => {
+        navigate(`/settings?provider=${providerId}&returnTo=${encodeURIComponent('/configure')}`)
+    }
 
     // Prompts to display (limited unless expanded)
     const displayPrompts = showAllPrompts ? config.prompts : config.prompts.slice(0, 5)
@@ -106,70 +142,70 @@ function ConfigureView() {
                 </p>
             </div>
 
-            {/* Step 1: API Key */}
+            {/* Step 1: Model Access */}
             <Card padding="none" className="p-6 mb-4">
                 <div className="flex items-start gap-4">
                     <div className={`
                         w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0
-                        ${apiKeyComplete
+                        ${modelAccessComplete
                             ? 'bg-[var(--color-success)] text-[#FFFFFF]'
                             : 'bg-[var(--color-accent)] text-[#FFFFFF]'
                         }
                     `}>
-                        {apiKeyComplete ? <Check size={16} strokeWidth={2.5} /> : '1'}
+                        {modelAccessComplete ? <Check size={16} strokeWidth={2.5} /> : '1'}
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-1">
                             <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
-                                API Key
+                                Select Models
                             </h2>
-                            {apiKeyComplete && <Badge variant="success">Configured</Badge>}
+                            {modelAccessComplete && <Badge variant="success">Access ready</Badge>}
                         </div>
                         <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-                            Required to run evaluations — stored locally in your browser
+                            Choose the model that produces skill outputs and the model that creates prompts, criteria, and judgments
                         </p>
 
-                        {!apiKeyComplete ? (
-                            <div className="flex gap-3">
-                                <input
-                                    type="password"
-                                    value={localApiKey}
-                                    onChange={(e) => setLocalApiKey(e.target.value)}
-                                    placeholder="sk-ant-api03-..."
-                                    className="flex-1 font-mono text-sm"
-                                />
-                                <Button
-                                    onClick={handleSaveApiKey}
-                                    disabled={!localApiKey.trim()}
-                                    size="md"
+                        <div className="space-y-4">
+                            <div className="grid gap-3 md:grid-cols-[190px_1fr_auto] md:items-center">
+                                <label className="text-sm font-medium text-[var(--color-text-secondary)]">
+                                    Output Model
+                                </label>
+                                <select
+                                    value={settings.defaultGenModel}
+                                    onChange={(e) => updateSetting('defaultGenModel', e.target.value)}
+                                    className="w-full"
                                 >
-                                    Save Key
-                                </Button>
+                                    {renderModelOptions()}
+                                </select>
+                                {renderModelAccess(settings.defaultGenModel)}
                             </div>
-                        ) : (
-                            <div className="flex items-center gap-3">
-                                <span className="text-sm text-[var(--color-text-muted)] font-mono">
-                                    ••••••••{settings.apiKey.slice(-8)}
-                                </span>
-                                <Link to="/settings" className="text-sm text-[var(--color-accent)] hover:underline">
-                                    Change in Settings
-                                </Link>
+
+                            <div className="grid gap-3 md:grid-cols-[190px_1fr_auto] md:items-center">
+                                <label className="text-sm font-medium text-[var(--color-text-secondary)]">
+                                    Judge Model
+                                </label>
+                                <select
+                                    value={settings.defaultJudgeModel}
+                                    onChange={(e) => updateSetting('defaultJudgeModel', e.target.value)}
+                                    className="w-full"
+                                >
+                                    {renderModelOptions()}
+                                </select>
+                                {renderModelAccess(settings.defaultJudgeModel)}
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </Card>
 
             {/* Step 2: Upload Skills */}
-            <Card padding="none" className={`p-6 mb-4 ${!apiKeyComplete ? 'opacity-50 pointer-events-none' : ''}`}>
+            <Card padding="none" className="p-6 mb-4">
                 <div className="flex items-start gap-4 mb-6">
                     <div className={`
                         w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0
                         ${skillsComplete
                             ? 'bg-[var(--color-success)] text-[#FFFFFF]'
-                            : apiKeyComplete
-                                ? 'bg-[var(--color-accent)] text-[#FFFFFF]'
-                                : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'
+                            : 'bg-[var(--color-accent)] text-[#FFFFFF]'
                         }
                     `}>
                         {skillsComplete ? <Check size={16} strokeWidth={2.5} /> : '2'}
@@ -251,7 +287,7 @@ function ConfigureView() {
             </Card>
 
             {/* Step 3: Configure Evaluation */}
-            <Card padding="none" className={`p-6 mb-4 ${!skillsComplete ? 'opacity-50 pointer-events-none' : ''}`}>
+            <Card padding="none" className={`p-6 mb-4 ${!skillsComplete ? 'opacity-50' : ''}`}>
                 <div className="flex items-start gap-4 mb-6">
                     <div className={`
                         w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0
@@ -269,31 +305,52 @@ function ConfigureView() {
                             Configure Evaluation
                         </h2>
                         <p className="text-sm text-[var(--color-text-secondary)]">
-                            Generate or customize criteria and prompts
+                            Generate or customize criteria and prompts with the Judge model
                         </p>
                     </div>
                 </div>
 
                 {/* Generate All Button */}
                 <div className="mb-6">
-                    <Button
-                        onClick={() => generateAll(false)}
-                        disabled={isGenerating || !skillsComplete}
-                        className="w-full"
-                        size="lg"
-                    >
-                        {isGenerating ? (
-                            <>
-                                <Loader2 size={18} className="animate-spin" />
-                                Generating...
-                            </>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                        <p className="text-sm text-[var(--color-text-secondary)]">
+                            Config generation uses <span className="font-medium text-[var(--color-text-primary)]">{judgeModel?.label || settings.defaultJudgeModel}</span>
+                        </p>
+                        {judgeModelAccessComplete ? (
+                            <Badge variant="success">{judgeProvider.label} connected</Badge>
                         ) : (
-                            <>
-                                <Wand2 size={18} />
-                                Generate All from Skills
-                            </>
+                            <Badge variant="warning">{judgeProvider.label} key needed</Badge>
                         )}
-                    </Button>
+                    </div>
+                    {judgeModelAccessComplete ? (
+                        <Button
+                            onClick={() => generateAll(false)}
+                            disabled={isGenerating || !skillsComplete}
+                            className="w-full"
+                            size="lg"
+                        >
+                            {isGenerating ? (
+                                <>
+                                    <Loader2 size={18} className="animate-spin" />
+                                    Generating...
+                                </>
+                            ) : (
+                                <>
+                                    <Wand2 size={18} />
+                                    Generate All from Skills
+                                </>
+                            )}
+                        </Button>
+                    ) : (
+                        <Button
+                            onClick={() => openProviderSettings(judgeProviderId)}
+                            className="w-full"
+                            size="lg"
+                        >
+                            <Key size={18} />
+                            Add {judgeProvider.label} Key to Generate
+                        </Button>
+                    )}
                     {generationError && (
                         <p className="text-sm text-[var(--color-error)] mt-2">{generationError}</p>
                     )}
@@ -336,7 +393,7 @@ function ConfigureView() {
                             variant="ghost"
                             size="sm"
                             onClick={regenerateCriteria}
-                            disabled={isGenerating}
+                            disabled={isGenerating || !judgeModelAccessComplete}
                         >
                             <RefreshCw size={14} className={isGenerating ? 'animate-spin' : ''} />
                             Auto
@@ -430,7 +487,7 @@ function ConfigureView() {
                             variant="ghost"
                             size="sm"
                             onClick={regeneratePrompts}
-                            disabled={isGenerating}
+                            disabled={isGenerating || !judgeModelAccessComplete}
                         >
                             <RefreshCw size={14} className={isGenerating ? 'animate-spin' : ''} />
                             Auto

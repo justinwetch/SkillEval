@@ -2,12 +2,13 @@
  * Run a single evaluation - call API with skill as system prompt
  */
 
-import { callAnthropic } from './api';
+import { callModel, extractText } from './api';
+import { DEFAULT_GENERATION_MODEL } from './providers';
 
 /**
  * Run a single evaluation
  * @param {Object} options
- * @param {string} options.apiKey - Anthropic API key
+ * @param {Object} options.apiKeys - API keys keyed by provider
  * @param {string} options.skillContent - Skill file content to use as system prompt addition
  * @param {string} options.baseSystemPrompt - Optional base system prompt
  * @param {string} options.prompt - User prompt to evaluate
@@ -17,10 +18,11 @@ import { callAnthropic } from './api';
  */
 export async function runSingleEval({
     apiKey,
+    apiKeys,
     skillContent,
     baseSystemPrompt = '',
     prompt,
-    model = 'claude-sonnet-4-6-20260217',
+    model = DEFAULT_GENERATION_MODEL,
     maxTokens = 8192
 }) {
     const startTime = Date.now();
@@ -31,15 +33,16 @@ export async function runSingleEval({
         : skillContent;
 
     try {
-        const response = await callAnthropic({
+        const response = await callModel({
             apiKey,
+            apiKeys,
             model,
             systemPrompt,
             messages: [{ role: 'user', content: prompt }],
             maxTokens
         });
 
-        const content = response.content?.[0]?.text || '';
+        const content = extractText(response);
         const elapsed = Date.now() - startTime;
 
         return { content, error: null, elapsed };
@@ -52,7 +55,7 @@ export async function runSingleEval({
 /**
  * Run all evaluations for all prompts, both skills in parallel
  * @param {Object} options
- * @param {string} options.apiKey
+ * @param {Object} options.apiKeys
  * @param {Object} options.skillA - { content }
  * @param {Object} options.skillB - { content }
  * @param {string[]} options.prompts
@@ -64,10 +67,11 @@ export async function runSingleEval({
  */
 export async function runAllEvals({
     apiKey,
+    apiKeys,
     skillA,
     skillB,
     prompts,
-    model = 'claude-sonnet-4-6-20260217',
+    model = DEFAULT_GENERATION_MODEL,
     maxTokens = 8192,
     baseSystemPrompt = '',
     onProgress
@@ -95,6 +99,7 @@ export async function runAllEvals({
         promises.push(
             runSingleEval({
                 apiKey,
+                apiKeys,
                 skillContent: skillA.content,
                 baseSystemPrompt,
                 prompt,
@@ -111,6 +116,7 @@ export async function runAllEvals({
         promises.push(
             runSingleEval({
                 apiKey,
+                apiKeys,
                 skillContent: skillB.content,
                 baseSystemPrompt,
                 prompt,

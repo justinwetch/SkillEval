@@ -48,10 +48,6 @@ ${criterion.description}
         prompt += '\n';
     });
 
-    // Build the scoring table header
-    const criteriaHeaders = criteria.map(c => c.name).join(' | ');
-    const scoreColumns = criteria.map(() => 'X/5').join(' | ');
-
     // Build breakdown JSON structure
     const breakdownFields = criteria.map(c =>
         `    "${c.id}": {"A": X, "B": X}`

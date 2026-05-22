@@ -2,14 +2,15 @@
  * Judge a single evaluation - compare A vs B outputs
  */
 
-import { callAnthropic } from './api';
+import { callModel, extractText } from './api';
 import { buildJudgePrompt, parseJudgeResponse } from './buildJudgePrompt';
 import { captureScreenshots } from './screenshot';
+import { DEFAULT_GENERATION_MODEL } from './providers';
 
 /**
  * Judge a single evaluation
  * @param {Object} options
- * @param {string} options.apiKey
+ * @param {Object} options.apiKeys
  * @param {Object} options.evaluation - { prompt, resultA, resultB }
  * @param {Array} options.criteria - Criteria with rubrics
  * @param {string} options.outputType - 'text' | 'visual' | 'both'
@@ -19,10 +20,11 @@ import { captureScreenshots } from './screenshot';
  */
 export async function judgeSingleEval({
     apiKey,
+    apiKeys,
     evaluation,
     criteria,
     outputType,
-    judgeModel = 'claude-sonnet-4-6-20260217',
+    judgeModel = DEFAULT_GENERATION_MODEL,
     skillNames = { skillA: 'Skill A', skillB: 'Skill B' }
 }) {
     const startTime = Date.now();
@@ -116,15 +118,16 @@ export async function judgeSingleEval({
         });
 
         // Call the judge
-        const response = await callAnthropic({
+        const response = await callModel({
             apiKey,
+            apiKeys,
             model: judgeModel,
             systemPrompt,
             messages: [{ role: 'user', content: messageContent }],
             maxTokens: 4096
         });
 
-        const resultText = response.content?.[0]?.text || '';
+        const resultText = extractText(response);
         const scores = parseJudgeResponse(resultText);
         const elapsed = Date.now() - startTime;
 
@@ -153,7 +156,7 @@ export async function judgeSingleEval({
 /**
  * Judge all evaluations in parallel
  * @param {Object} options
- * @param {string} options.apiKey
+ * @param {Object} options.apiKeys
  * @param {Array} options.evaluations - Array of evaluations with results
  * @param {Array} options.criteria
  * @param {string} options.outputType
@@ -164,6 +167,7 @@ export async function judgeSingleEval({
  */
 export async function judgeAllEvals({
     apiKey,
+    apiKeys,
     evaluations,
     criteria,
     outputType,
@@ -180,9 +184,10 @@ export async function judgeAllEvals({
     const total = evalsToJudge.length;
     let completed = 0;
 
-    const promises = evalsToJudge.map(async (ev, idx) => {
+    const promises = evalsToJudge.map(async (ev) => {
         const result = await judgeSingleEval({
             apiKey,
+            apiKeys,
             evaluation: ev,
             criteria,
             outputType,

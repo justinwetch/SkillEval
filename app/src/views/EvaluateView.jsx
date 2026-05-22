@@ -24,9 +24,10 @@ import { useSettings } from '../contexts/SettingsContext'
 import { useEvalConfig } from '../contexts/EvalConfigContext'
 import { useEvalRun } from '../contexts/EvalRunContext'
 import { checkServerHealth } from '../utils/screenshot'
+import { DEFAULT_GENERATION_MODEL, DEFAULT_JUDGE_MODEL, getModelsByProvider } from '../utils/providers'
 
 function EvaluateView() {
-    const { needsApiKey } = useSettings()
+    const { settings, needsApiKey } = useSettings()
     const { config, isReadyToEvaluate, updatePrompt } = useEvalConfig()
     const {
         evaluations,
@@ -46,8 +47,9 @@ function EvaluateView() {
     const [showAllPrompts, setShowAllPrompts] = useState(false)
     const [editingPromptIdx, setEditingPromptIdx] = useState(null)
     const [screenshotServerStatus, setScreenshotServerStatus] = useState(null)
-    const [generationModel, setGenerationModel] = useState('claude-sonnet-4-6-20260217')
-    const [judgeModel, setJudgeModel] = useState('claude-opus-4-6-20260205')
+    const [generationModel, setGenerationModel] = useState(settings.defaultGenModel || DEFAULT_GENERATION_MODEL)
+    const [judgeModel, setJudgeModel] = useState(settings.defaultJudgeModel || DEFAULT_JUDGE_MODEL)
+    const modelGroups = getModelsByProvider()
 
     // Check screenshot server on mount and when output type changes
     useEffect(() => {
@@ -147,7 +149,7 @@ function EvaluateView() {
         }
     }
 
-    // API key required state
+    // Provider key required state
     if (needsApiKey) {
         return (
             <div className="animate-fade-in max-w-md mx-auto text-center py-20">
@@ -155,10 +157,10 @@ function EvaluateView() {
                     <AlertCircle size={28} strokeWidth={1.5} />
                 </div>
                 <h1 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
-                    API Key Required
+                    Provider Key Required
                 </h1>
                 <p className="text-[var(--color-text-secondary)] text-sm mb-8 leading-relaxed">
-                    You need to add an Anthropic API key before you can run evaluations.
+                    Add a key for the provider you want to use before running evaluations.
                 </p>
                 <Link to="/settings">
                     <Button>Go to Settings</Button>
@@ -285,11 +287,13 @@ function EvaluateView() {
                             onChange={(e) => setGenerationModel(e.target.value)}
                             className="text-sm px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[#F5E6D3] text-[#2D2018] font-medium"
                         >
-                            <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
-                            <option value="claude-sonnet-4-6-20260217">Sonnet 4.6</option>
-                            <option value="claude-sonnet-4-5-20250929">Sonnet 4.5</option>
-                            <option value="claude-opus-4-6-20260205">Opus 4.6</option>
-                            <option value="claude-opus-4-5-20251101">Opus 4.5</option>
+                            {modelGroups.map(({ provider, models }) => (
+                                <optgroup key={provider.id} label={provider.label}>
+                                    {models.map(model => (
+                                        <option key={model.value} value={model.value}>{model.label}</option>
+                                    ))}
+                                </optgroup>
+                            ))}
                         </select>
                         {/* Run All Button */}
                         <Button
@@ -410,11 +414,13 @@ function EvaluateView() {
                             onChange={(e) => setJudgeModel(e.target.value)}
                             className="text-sm px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[#F5E6D3] text-[#2D2018] font-medium"
                         >
-                            <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
-                            <option value="claude-sonnet-4-6-20260217">Sonnet 4.6</option>
-                            <option value="claude-sonnet-4-5-20250929">Sonnet 4.5</option>
-                            <option value="claude-opus-4-6-20260205">Opus 4.6</option>
-                            <option value="claude-opus-4-5-20251101">Opus 4.5</option>
+                            {modelGroups.map(({ provider, models }) => (
+                                <optgroup key={provider.id} label={provider.label}>
+                                    {models.map(model => (
+                                        <option key={model.value} value={model.value}>{model.label}</option>
+                                    ))}
+                                </optgroup>
+                            ))}
                         </select>
                         <Button
                             onClick={() => runJudgments(judgeModel)}

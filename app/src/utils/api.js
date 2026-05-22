@@ -1,109 +1,282 @@
-/**
- * Anthropic API client wrapper for browser-side usage
- */
+import { getModelProvider, normalizeModelId, PROVIDERS, DEFAULT_GENERATION_MODEL } from './providers'
 
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
+const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
+const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
-/**
- * Call the Anthropic API
- * @param {Object} options
- * @param {string} options.apiKey - Anthropic API key
- * @param {string} options.model - Model to use (e.g., 'claude-sonnet-4-6-20260217')
- * @param {string} options.systemPrompt - System prompt
- * @param {Array} options.messages - Array of {role, content} messages
- * @param {number} options.maxTokens - Max tokens for response (default 8192)
- * @param {boolean} options.jsonMode - Request JSON output format
- * @returns {Promise<Object>} API response
- */
-export async function callAnthropic({
-    apiKey,
-    model = 'claude-sonnet-4-6-20260217',
-    systemPrompt,
-    messages,
-    maxTokens = 8192,
-    jsonMode = false
-}) {
+function getApiKey({ apiKey, apiKeys, provider }) {
+    return apiKey || apiKeys?.[provider] || ''
+}
+
+function assertApiKey(apiKey, provider) {
     if (!apiKey) {
-        throw new Error('API key is required');
-    }
-
-    const headers = {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-    };
-
-    const body = {
-        model,
-        max_tokens: maxTokens,
-        messages,
-    };
-
-    if (systemPrompt) {
-        body.system = systemPrompt;
-    }
-
-    // Note: Anthropic doesn't have a direct json_mode like OpenAI,
-    // but we can instruct the model in the system prompt
-    // The model will be instructed to output JSON in the system prompt
-
-    try {
-        const response = await fetch(ANTHROPIC_API_URL, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(
-                errorData.error?.message ||
-                `API request failed with status ${response.status}`
-            );
-        }
-
-        const data = await response.json();
-
-        // Extract text content from response
-        const textContent = data.content?.find(c => c.type === 'text')?.text;
-
-        if (jsonMode && textContent) {
-            try {
-                // Try to parse as JSON, handling potential markdown code blocks
-                let jsonStr = textContent;
-
-                // Remove markdown code blocks if present
-                const jsonMatch = textContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-                if (jsonMatch) {
-                    jsonStr = jsonMatch[1];
-                }
-
-                return {
-                    ...data,
-                    parsed: JSON.parse(jsonStr.trim())
-                };
-            } catch (parseError) {
-                console.warn('Failed to parse JSON response:', parseError);
-                return {
-                    ...data,
-                    parseError: parseError.message
-                };
-            }
-        }
-
-        return data;
-    } catch (error) {
-        console.error('Anthropic API error:', error);
-        throw error;
+        throw new Error(`${PROVIDERS[provider]?.label || provider} provider key is required`)
     }
 }
 
-/**
- * Extract text content from an Anthropic API response
- * @param {Object} response - API response
- * @returns {string} Extracted text
- */
+function stripJsonCodeFence(text) {
+    const match = text?.match(/```(?:json)?\s*([\s\S]*?)```/)
+    return (match ? match[1] : text)?.trim()
+}
+
+function attachParsedJson(result, text, jsonMode) {
+    if (!jsonMode || !text) return result
+
+    try {
+        return {
+            ...result,
+            parsed: JSON.parse(stripJsonCodeFence(text)),
+        }
+    } catch (parseError) {
+        console.warn('Failed to parse JSON response:', parseError)
+        return {
+            ...result,
+            parseError: parseError.message,
+        }
+    }
+}
+
+function normalizeContentParts(content) {
+    if (typeof content === 'string') {
+        return [{ type: 'text', text: content }]
+    }
+
+    if (!Array.isArray(content)) {
+        return [{ type: 'text', text: String(content ?? '') }]
+    }
+
+    return content
+}
+
+function toOpenAIContent(content) {
+    return normalizeContentParts(content).map(part => {
+        if (part.type === 'image') {
+            const source = part.source || {}
+            const mediaType = source.media_type || source.mediaType || 'image/png'
+            return {
+                type: 'input_image',
+                image_url: `data:${mediaType};base64,${source.data}`,
+            }
+        }
+
+        return {
+            type: 'input_text',
+            text: part.text || '',
+        }
+    })
+}
+
+function toGeminiParts(content) {
+    return normalizeContentParts(content).map(part => {
+        if (part.type === 'image') {
+            const source = part.source || {}
+            return {
+                inline_data: {
+                    mime_type: source.media_type || source.mediaType || 'image/png',
+                    data: source.data,
+                },
+            }
+        }
+
+        return { text: part.text || '' }
+    })
+}
+
+function extractOpenAIText(data) {
+    if (data.output_text) return data.output_text
+
+    const output = data.output || []
+    for (const item of output) {
+        for (const content of item.content || []) {
+            if (content.type === 'output_text' && content.text) return content.text
+            if (content.text) return content.text
+        }
+    }
+
+    return ''
+}
+
+function extractGeminiText(data) {
+    return data.candidates?.[0]?.content?.parts
+        ?.map(part => part.text || '')
+        .join('') || ''
+}
+
+async function parseErrorResponse(response) {
+    const errorData = await response.json().catch(() => ({}))
+    return errorData.error?.message ||
+        errorData.message ||
+        `API request failed with status ${response.status}`
+}
+
+export async function callAnthropic({
+    apiKey,
+    model = DEFAULT_GENERATION_MODEL,
+    systemPrompt,
+    messages,
+    maxTokens = 8192,
+    jsonMode = false,
+}) {
+    assertApiKey(apiKey, 'anthropic')
+
+    const body = {
+        model: normalizeModelId(model),
+        max_tokens: maxTokens,
+        messages,
+    }
+
+    if (systemPrompt) {
+        body.system = systemPrompt
+    }
+
+    const response = await fetch(ANTHROPIC_API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response))
+    }
+
+    const data = await response.json()
+    const text = extractText(data)
+    return attachParsedJson(data, text, jsonMode)
+}
+
+export async function callOpenAI({
+    apiKey,
+    model = 'gpt-5.5',
+    systemPrompt,
+    messages,
+    maxTokens = 8192,
+    jsonMode = false,
+}) {
+    assertApiKey(apiKey, 'openai')
+
+    const input = []
+
+    if (systemPrompt) {
+        input.push({
+            role: 'developer',
+            content: systemPrompt,
+        })
+    }
+
+    for (const message of messages) {
+        input.push({
+            role: message.role === 'assistant' ? 'assistant' : 'user',
+            content: toOpenAIContent(message.content),
+        })
+    }
+
+    const body = {
+        model: normalizeModelId(model),
+        input,
+        max_output_tokens: maxTokens,
+    }
+
+    if (jsonMode) {
+        body.text = { format: { type: 'json_object' } }
+    }
+
+    const response = await fetch(OPENAI_RESPONSES_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response))
+    }
+
+    const data = await response.json()
+    const text = extractOpenAIText(data)
+    return attachParsedJson({ ...data, text }, text, jsonMode)
+}
+
+export async function callGemini({
+    apiKey,
+    model = 'gemini-3.5-flash',
+    systemPrompt,
+    messages,
+    maxTokens = 8192,
+    jsonMode = false,
+}) {
+    assertApiKey(apiKey, 'gemini')
+
+    const body = {
+        contents: messages.map(message => ({
+            role: message.role === 'assistant' ? 'model' : 'user',
+            parts: toGeminiParts(message.content),
+        })),
+        generationConfig: {
+            maxOutputTokens: maxTokens,
+        },
+    }
+
+    if (systemPrompt) {
+        body.system_instruction = {
+            parts: [{ text: systemPrompt }],
+        }
+    }
+
+    if (jsonMode) {
+        body.generationConfig.responseMimeType = 'application/json'
+    }
+
+    const response = await fetch(`${GEMINI_API_BASE_URL}/${normalizeModelId(model)}:generateContent`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response))
+    }
+
+    const data = await response.json()
+    const text = extractGeminiText(data)
+    return attachParsedJson({ ...data, text }, text, jsonMode)
+}
+
+export async function callModel({
+    provider,
+    apiKey,
+    apiKeys,
+    model = DEFAULT_GENERATION_MODEL,
+    ...options
+}) {
+    const normalizedModel = normalizeModelId(model)
+    const resolvedProvider = provider || getModelProvider(normalizedModel)
+    const resolvedApiKey = getApiKey({ apiKey, apiKeys, provider: resolvedProvider })
+
+    if (resolvedProvider === 'openai') {
+        return callOpenAI({ ...options, apiKey: resolvedApiKey, model: normalizedModel })
+    }
+
+    if (resolvedProvider === 'gemini') {
+        return callGemini({ ...options, apiKey: resolvedApiKey, model: normalizedModel })
+    }
+
+    return callAnthropic({ ...options, apiKey: resolvedApiKey, model: normalizedModel })
+}
+
 export function extractText(response) {
-    return response.content?.find(c => c.type === 'text')?.text || '';
+    if (response.text) return response.text
+    if (response.output_text) return response.output_text
+    if (response.content) return response.content?.find(c => c.type === 'text')?.text || ''
+    if (response.candidates) return extractGeminiText(response)
+    return ''
 }

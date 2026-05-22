@@ -8,14 +8,14 @@ function ApiKeyWarning() {
                 <div className="flex items-center gap-3 text-[#2D2A1F]">
                     <AlertTriangle size={16} strokeWidth={2} />
                     <span className="text-sm font-medium">
-                        No API key configured. Nothing will work until you add one.
+                        No provider key configured. Add one before running evaluations.
                     </span>
                 </div>
                 <Link
                     to="/settings"
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(45,42,31,0.85)] hover:bg-[rgba(45,42,31,1)] text-[#FFFFFF] text-sm font-semibold transition-colors shadow-sm"
                 >
-                    Add API Key
+                    Add Provider Key
                     <ArrowRight size={14} strokeWidth={2.5} />
                 </Link>
             </div>

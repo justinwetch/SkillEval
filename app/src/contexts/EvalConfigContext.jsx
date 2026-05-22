@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Evaluation Configuration Context
  * Manages state for skill files, criteria, prompts, and generation
@@ -169,7 +170,8 @@ export function EvalConfigProvider({ children }) {
 
         try {
             const result = await generateFromSkills({
-                apiKey: settings.apiKey,
+                apiKeys: settings.apiKeys,
+                model: settings.defaultJudgeModel,
                 skillA: config.skillA,
                 skillB: config.skillB,
                 generationType: 'all',
@@ -200,7 +202,7 @@ export function EvalConfigProvider({ children }) {
         } finally {
             setIsGenerating(false);
         }
-    }, [config.skillA, config.skillB, config.promptCount, settings.apiKey, persistConfig]);
+    }, [config.skillA, config.skillB, config.promptCount, settings.apiKeys, settings.defaultJudgeModel, persistConfig]);
 
     // Regenerate just criteria
     const regenerateCriteria = useCallback(async () => {
@@ -214,7 +216,8 @@ export function EvalConfigProvider({ children }) {
 
         try {
             const result = await generateFromSkills({
-                apiKey: settings.apiKey,
+                apiKeys: settings.apiKeys,
+                model: settings.defaultJudgeModel,
                 skillA: config.skillA,
                 skillB: config.skillB,
                 generationType: 'criteria',
@@ -237,7 +240,7 @@ export function EvalConfigProvider({ children }) {
         } finally {
             setIsGenerating(false);
         }
-    }, [config, settings.apiKey, setCriteria]);
+    }, [config, settings.apiKeys, settings.defaultJudgeModel, setCriteria]);
 
     // Regenerate just prompts
     const regeneratePrompts = useCallback(async () => {
@@ -251,7 +254,8 @@ export function EvalConfigProvider({ children }) {
 
         try {
             const result = await generateFromSkills({
-                apiKey: settings.apiKey,
+                apiKeys: settings.apiKeys,
+                model: settings.defaultJudgeModel,
                 skillA: config.skillA,
                 skillB: config.skillB,
                 generationType: 'prompts',
@@ -275,7 +279,7 @@ export function EvalConfigProvider({ children }) {
         } finally {
             setIsGenerating(false);
         }
-    }, [config, settings.apiKey, setPrompts]);
+    }, [config, settings.apiKeys, settings.defaultJudgeModel, setPrompts]);
 
     // Clear all configuration
     const clearConfig = useCallback(() => {

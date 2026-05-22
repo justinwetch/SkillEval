@@ -3,10 +3,11 @@
  * Analyzes skill files and generates criteria, prompts, and output type
  */
 
-import { callAnthropic } from './api';
+import { callModel } from './api';
 import { getSkillHash, getCachedConfig, setCachedConfig } from './cache';
+import { DEFAULT_JUDGE_MODEL } from './providers';
 
-const GENERATION_MODEL = 'claude-sonnet-4-6-20260217';
+const GENERATION_MODEL = DEFAULT_JUDGE_MODEL;
 
 const SYSTEM_PROMPT = `You are a configuration generator for an AI skill evaluation tool.
 
@@ -219,7 +220,7 @@ function validateConfig(config) {
 /**
  * Generate evaluation configuration from skill files
  * @param {Object} options
- * @param {string} options.apiKey - Anthropic API key
+ * @param {Object} options.apiKeys - API keys keyed by provider
  * @param {Object} options.skillA - { filename, content }
  * @param {Object} options.skillB - { filename, content }
  * @param {string} options.generationType - 'all' | 'criteria' | 'prompts' | 'outputType'
@@ -230,6 +231,8 @@ function validateConfig(config) {
  */
 export async function generateFromSkills({
     apiKey,
+    apiKeys,
+    model = GENERATION_MODEL,
     skillA,
     skillB,
     generationType = 'all',
@@ -290,9 +293,10 @@ Do not generate criteria or prompts, use empty arrays.`;
     }
 
     try {
-        const response = await callAnthropic({
+        const response = await callModel({
             apiKey,
-            model: GENERATION_MODEL,
+            apiKeys,
+            model,
             systemPrompt: SYSTEM_PROMPT,
             messages: [{ role: 'user', content: userMessage }],
             maxTokens: 8192,
