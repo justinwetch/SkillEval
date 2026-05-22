@@ -158,9 +158,7 @@ SkillEval/
 │   └── package.json
 ├── test-skills/              # Example skill files
 ├── screenshots/              # GUI screenshots
-├── screenshot-server.js      # Optional visual evaluation server
-├── ARCHITECTURE.md           # Detailed architecture docs
-└── DESIGN_SYSTEM.md          # UI design system specs
+└── screenshot-server.js      # Optional visual evaluation server
 ```
 
 ---
