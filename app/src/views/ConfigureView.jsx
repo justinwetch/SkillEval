@@ -21,6 +21,7 @@ import Button from '../components/Button'
 import Badge from '../components/Badge'
 import { useSettings } from '../contexts/SettingsContext'
 import { useEvalConfig } from '../contexts/EvalConfigContext'
+import { useEvalRun } from '../contexts/EvalRunContext'
 import { getModel, getModelProvider, getModelsByProvider, PROVIDERS } from '../utils/providers'
 
 function ConfigureView() {
@@ -41,9 +42,15 @@ function ConfigureView() {
         generateAll,
         regenerateCriteria,
         regeneratePrompts,
+        clearConfig,
         isReadyToEvaluate,
         hasSkills
     } = useEvalConfig()
+    const {
+        evaluations,
+        runStatus,
+        clearRunState
+    } = useEvalRun()
 
     const [expandedCriterion, setExpandedCriterion] = useState(null)
     const [editingPrompt, setEditingPrompt] = useState(null)
@@ -91,6 +98,28 @@ function ConfigureView() {
     const judgeProviderId = getModelProvider(settings.defaultJudgeModel)
     const judgeProvider = PROVIDERS[judgeProviderId]
     const judgeModel = getModel(settings.defaultJudgeModel)
+    const hasEvaluationState = Boolean(
+        config.skillA.content ||
+        config.skillB.content ||
+        config.criteria.length ||
+        config.prompts.length ||
+        config.outputTypeReasoning ||
+        config.outputType !== 'text' ||
+        evaluations.length
+    )
+    const isRunActive = runStatus === 'generating' || runStatus === 'judging'
+
+    const handleClearEvaluation = useCallback(() => {
+        clearConfig()
+        clearRunState()
+        setExpandedCriterion(null)
+        setEditingPrompt(null)
+        setNewPromptText('')
+        setShowAllPrompts(false)
+
+        if (fileInputARef.current) fileInputARef.current.value = ''
+        if (fileInputBRef.current) fileInputBRef.current.value = ''
+    }, [clearConfig, clearRunState])
 
     const renderModelOptions = () => modelGroups.map(({ provider, models }) => (
         <optgroup key={provider.id} label={provider.label}>
@@ -133,13 +162,26 @@ function ConfigureView() {
     return (
         <div className="animate-fade-in max-w-3xl mx-auto">
             {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-2">
-                    Configure Evaluation
-                </h1>
-                <p className="text-[var(--color-text-secondary)]">
-                    Upload skills, then generate or customize your evaluation criteria
-                </p>
+            <div className="mb-8 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                    <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-2">
+                        Configure Evaluation
+                    </h1>
+                    <p className="text-[var(--color-text-secondary)]">
+                        Upload skills, then generate or customize your evaluation criteria
+                    </p>
+                </div>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearEvaluation}
+                    disabled={!hasEvaluationState || isGenerating || isRunActive}
+                    title="Clear evaluation state"
+                    className="mt-1 flex-shrink-0"
+                >
+                    <Trash2 size={14} />
+                    Clear
+                </Button>
             </div>
 
             {/* Step 1: Model Access */}
