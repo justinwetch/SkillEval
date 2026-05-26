@@ -7,14 +7,15 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { generateFromSkills, FALLBACK_CONFIG } from '../utils/generateConfig';
 import { useSettings } from './SettingsContext';
+import { createEmptySkill, isSkillReady } from '../utils/skillPackage';
 
 const EvalConfigContext = createContext(null);
 
 const STORAGE_KEY = 'skill_eval_current_config';
 
 const DEFAULT_CONFIG = {
-    skillA: { filename: '', content: '' },
-    skillB: { filename: '', content: '' },
+    skillA: createEmptySkill(),
+    skillB: createEmptySkill(),
     outputType: 'text',
     outputTypeReasoning: '',
     criteria: [],
@@ -160,8 +161,8 @@ export function EvalConfigProvider({ children }) {
 
     // Generate all configuration from skills
     const generateAll = useCallback(async (bypassCache = false) => {
-        if (!config.skillA.content || !config.skillB.content) {
-            setGenerationError('Both skill files are required');
+        if (!isSkillReady(config.skillA) || !isSkillReady(config.skillB)) {
+            setGenerationError('Both skill packages are required');
             return false;
         }
 
@@ -206,8 +207,8 @@ export function EvalConfigProvider({ children }) {
 
     // Regenerate just criteria
     const regenerateCriteria = useCallback(async () => {
-        if (!config.skillA.content || !config.skillB.content) {
-            setGenerationError('Both skill files are required');
+        if (!isSkillReady(config.skillA) || !isSkillReady(config.skillB)) {
+            setGenerationError('Both skill packages are required');
             return false;
         }
 
@@ -244,8 +245,8 @@ export function EvalConfigProvider({ children }) {
 
     // Regenerate just prompts
     const regeneratePrompts = useCallback(async () => {
-        if (!config.skillA.content || !config.skillB.content) {
-            setGenerationError('Both skill files are required');
+        if (!isSkillReady(config.skillA) || !isSkillReady(config.skillB)) {
+            setGenerationError('Both skill packages are required');
             return false;
         }
 
@@ -290,13 +291,13 @@ export function EvalConfigProvider({ children }) {
 
     // Check if ready to evaluate
     const isReadyToEvaluate =
-        config.skillA.content &&
-        config.skillB.content &&
+        isSkillReady(config.skillA) &&
+        isSkillReady(config.skillB) &&
         config.criteria.length > 0 &&
         config.prompts.length > 0;
 
     // Check if skills are loaded
-    const hasSkills = config.skillA.content && config.skillB.content;
+    const hasSkills = isSkillReady(config.skillA) && isSkillReady(config.skillB);
 
     return (
         <EvalConfigContext.Provider value={{

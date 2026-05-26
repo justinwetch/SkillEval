@@ -1,0 +1,14 @@
+{
+  "name": "skilleval",
+  "private": true,
+  "scripts": {
+    "server": "node screenshot-server.js",
+    "dev:app": "npm --prefix app run dev",
+    "dev": "npm --prefix app run dev"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "puppeteer-core": "^25.0.4"
+  }
+}

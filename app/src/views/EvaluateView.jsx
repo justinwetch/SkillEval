@@ -51,7 +51,7 @@ function EvaluateView() {
     const [judgeModel, setJudgeModel] = useState(settings.defaultJudgeModel || DEFAULT_JUDGE_MODEL)
     const modelGroups = getModelsByProvider()
 
-    // Check screenshot server on mount and when output type changes
+    // Check local runner on mount and when output type changes
     useEffect(() => {
         if (config.outputType === 'visual' || config.outputType === 'both') {
             checkServerHealth().then(setScreenshotServerStatus)
@@ -239,7 +239,7 @@ function EvaluateView() {
                 </p>
             </div>
 
-            {/* Screenshot Server Warning */}
+            {/* Local Runner Warning */}
             {(config.outputType === 'visual' || config.outputType === 'both') && screenshotServerStatus && !screenshotServerStatus.available && (
                 <Card className="p-4 mb-4 border-[var(--color-warning)] bg-[var(--color-warning)]/5">
                     <div className="flex items-start gap-3">
@@ -249,7 +249,7 @@ function EvaluateView() {
                                 Screenshot server not running
                             </p>
                             <p className="text-xs text-[var(--color-text-secondary)] mb-2">
-                                Visual judging requires the screenshot server. Run: <code className="bg-[var(--color-bg-tertiary)] px-1 rounded">node screenshot-server.js</code>
+                                Visual judging requires the local runner. Run: <code className="bg-[var(--color-bg-tertiary)] px-1 rounded">npm run server</code>
                             </p>
                             <Button
                                 variant="ghost"

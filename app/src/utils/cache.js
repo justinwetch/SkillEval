@@ -6,14 +6,16 @@
 const CACHE_PREFIX = 'skill_eval_config_';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+import { getSkillHashInput } from './skillPackage';
+
 /**
- * Generate a SHA-256 hash of skill contents for cache key
- * @param {Object} skillA - { filename, content }
- * @param {Object} skillB - { filename, content }
+ * Generate a SHA-256 hash of skill package contents for cache key
+ * @param {Object} skillA
+ * @param {Object} skillB
  * @returns {Promise<string>} Hash string
  */
 export async function getSkillHash(skillA, skillB) {
-    const combined = `${skillA.content}|||${skillB.content}`;
+    const combined = `${getSkillHashInput(skillA)}|||${getSkillHashInput(skillB)}`;
     const encoder = new TextEncoder();
     const data = encoder.encode(combined);
 

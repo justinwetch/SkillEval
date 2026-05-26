@@ -1,12 +1,20 @@
 # 🧪 Skill Evaluator
 
-A visual workbench for A/B testing AI skills. Upload two skill files, run them through a batch of test prompts, and let an AI judge score the results.
+A visual workbench for A/B testing AI skills. Upload two Agent Skill packages or single-file skills, run them through a batch of test prompts, and let an AI judge score the results.
 
 DEMO VIDEO: [SkillEval v1.1 product video](https://www.linkedin.com/posts/justinwetch_skilleval-v11-is-out-now-featuring-a-refreshed-ugcPost-7463683888738058240-N887/)
 
 I built this to improve Anthropic's frontend design skill and prove the improvements with data. That project was hardcoded to frontend evaluation, so I extracted the core evaluation engine and made it extensible—now you can 1v1 any two skills, in any domain, with any model.
 
 For the full story on how this started and why data-driven skill development matters, see [Teaching Claude to Design Better](https://www.justinwetch.com/blog/improvingclaudefrontend).
+
+---
+
+## v1.2 Update
+
+Skill Evaluator v1.2 adds support for zipped Agent Skill packages. You can now upload a standard `.zip` skill package with a root `SKILL.md`, and Skill Evaluator will preserve its separate references, scripts, assets, and supporting files when generating configs and running evaluations.
+
+Single-file `.md` and `.txt` skills still work as before, but internally they are treated as one-file Agent Skill packages so both upload paths use the same evaluation model.
 
 ---
 
@@ -20,7 +28,7 @@ This release also introduces a refreshed design language, with cleaner surfaces,
 
 ## Using the GUI
 
-**Configure** — Upload two skill files (A and B) and set up your evaluation. Click the ✨ Generate button to have AI analyze your skills and create appropriate evaluation criteria and test prompts automatically. Choose your output type (text, visual, or both) based on what your skills produce.
+**Configure** — Upload two single-file skills or zipped Agent Skill packages (A and B) and set up your evaluation. Click the ✨ Generate button to have AI analyze your skills and create appropriate evaluation criteria and test prompts automatically. Choose your output type (text, visual, or both) based on what your skills produce.
 
 Light:
 ![Configure - Upload skills and generate criteria in light mode](screenshots/configure%201.png)
@@ -80,14 +88,15 @@ Dark:
 
 ```bash
 git clone https://github.com/justinwetch/SkillEval.git
-cd SkillEval/app
+cd SkillEval
 npm install
+npm --prefix app install
 ```
 
 ### Running the GUI
 
 ```bash
-npm run dev
+npm run dev:app
 ```
 
 Open **http://localhost:5173** in your browser.
@@ -96,7 +105,7 @@ Open **http://localhost:5173** in your browser.
 
 1. Go to **Configure** and choose the Output model and Judge model
 2. If a selected model needs provider access, click its **Add Key** action to open the right Settings panel
-3. Upload two skill files
+3. Upload two single-file skills or zipped Agent Skill packages
 4. Click **Generate All from Skills** to auto-generate criteria and prompts
 5. Go to **Evaluate** and click **Run All Evals**
 6. Once generation completes, click **Judge All** to score the outputs
@@ -126,22 +135,28 @@ For judging, **Claude Opus 4.7** is the default because strong reasoning is usef
 
 For documentation on how to write effective skill files, see [Claude Code Skills](https://code.claude.com/docs/en/skills).
 
+Skill Evaluator accepts:
+- `.zip` Agent Skill packages with a root `SKILL.md`
+- `.md` single-file skills
+- `.txt` single-file skills
+
 The `test-skills/` folder contains example skill files you can use as reference:
 - `sql-skill-a.md` — Basic SQL query generation skill
 - `sql-skill-b.md` — Advanced SQL skill with optimization focus
+- `zip-fixtures/` — Example zipped Agent Skill packages
 
 ---
 
-## Screenshot Server (Optional)
+## Local Runner (Optional)
 
-For visual evaluations (HTML/CSS skills that produce rendered output), you'll need the screenshot server:
+For visual evaluations (HTML/CSS skills that produce rendered output), you'll need the local runner:
 
 ```bash
 # From the project root
-node screenshot-server.js
+npm run server
 ```
 
-The server runs on port 3001 and uses Puppeteer to capture screenshots of rendered HTML. If you're evaluating text-only skills (code, SQL, writing, etc.), you don't need this.
+The server runs on port 3001 and uses local Chrome through Puppeteer to capture screenshots of rendered HTML. If you're evaluating text-only skills (code, SQL, writing, etc.), you don't need this.
 
 ---
 
@@ -158,7 +173,7 @@ SkillEval/
 │   └── package.json
 ├── test-skills/              # Example skill files
 ├── screenshots/              # GUI screenshots
-└── screenshot-server.js      # Optional visual evaluation server
+└── screenshot-server.js      # Optional local runner for visual evaluation
 ```
 
 ---

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const puppeteer = require('puppeteer');
+const fs = require('node:fs');
+const puppeteer = require('puppeteer-core');
 
 const app = express();
 const PORT = 3001;
@@ -12,9 +13,28 @@ app.use(express.json({ limit: '50mb' }));
 // Browser instance (reused for performance)
 let browser = null;
 
+function getChromePath() {
+    const candidates = [
+        process.env.CHROME_PATH,
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Chromium.app/Contents/MacOS/Chromium',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+    ].filter(Boolean);
+
+    const executablePath = candidates.find(candidate => fs.existsSync(candidate));
+    if (!executablePath) {
+        throw new Error('Chrome executable not found. Install Google Chrome or set CHROME_PATH to a Chromium executable.');
+    }
+    return executablePath;
+}
+
 async function getBrowser() {
     if (!browser) {
         browser = await puppeteer.launch({
+            executablePath: getChromePath(),
             headless: 'new',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
@@ -67,7 +87,26 @@ app.post('/screenshot', async (req, res) => {
 
 // Health check
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', browser: browser ? 'running' : 'not started' });
+    let chromePath = null;
+    let chromeAvailable = false;
+    try {
+        chromePath = getChromePath();
+        chromeAvailable = true;
+    } catch (error) {
+        chromePath = error.message;
+    }
+
+    res.json({
+        status: 'ok',
+        service: 'skilleval-local-runner',
+        browser: browser ? 'running' : 'not started',
+        chromeAvailable,
+        chromePath,
+    });
+});
+
+app.get('/api/health', (req, res) => {
+    res.redirect(307, '/health');
 });
 
 // Graceful shutdown
@@ -76,12 +115,18 @@ process.on('SIGINT', async () => {
     if (browser) {
         await browser.close();
     }
+    clearInterval(keepAlive);
+    server.close();
     process.exit(0);
 });
 
-app.listen(PORT, () => {
-    console.log(`Screenshot server running on http://localhost:${PORT}`);
+const server = app.listen(PORT, '127.0.0.1', () => {
+    console.log(`SkillEval local runner running on http://localhost:${PORT}`);
     console.log('Endpoints:');
     console.log('  POST /screenshot - Capture screenshot of HTML');
     console.log('  GET  /health     - Health check');
 });
+
+// Some desktop sandbox launchers do not keep the Node event loop alive for the
+// HTTP server handle alone, so keep an explicit heartbeat for foreground runs.
+const keepAlive = setInterval(() => {}, 60_000);

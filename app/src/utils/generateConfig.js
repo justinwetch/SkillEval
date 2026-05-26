@@ -1,17 +1,18 @@
 /**
  * Auto-generation service for evaluation configuration
- * Analyzes skill files and generates criteria, prompts, and output type
+ * Analyzes Agent Skill packages and generates criteria, prompts, and output type
  */
 
 import { callModel } from './api';
 import { getSkillHash, getCachedConfig, setCachedConfig } from './cache';
 import { DEFAULT_JUDGE_MODEL } from './providers';
+import { buildSkillPackageParts, isSkillReady } from './skillPackage';
 
 const GENERATION_MODEL = DEFAULT_JUDGE_MODEL;
 
 const SYSTEM_PROMPT = `You are a configuration generator for an AI skill evaluation tool.
 
-Given two skill files that will be compared against each other, analyze them and generate appropriate evaluation configuration.
+Given two Agent Skill packages that will be compared against each other, analyze them and generate appropriate evaluation configuration.
 
 Your task is to understand:
 1. What domain/task the skills are designed for
@@ -218,11 +219,11 @@ function validateConfig(config) {
 }
 
 /**
- * Generate evaluation configuration from skill files
+ * Generate evaluation configuration from Agent Skill packages
  * @param {Object} options
  * @param {Object} options.apiKeys - API keys keyed by provider
- * @param {Object} options.skillA - { filename, content }
- * @param {Object} options.skillB - { filename, content }
+ * @param {Object} options.skillA - Agent Skill package
+ * @param {Object} options.skillB - Agent Skill package
  * @param {string} options.generationType - 'all' | 'criteria' | 'prompts' | 'outputType'
  * @param {number} options.promptCount - Number of prompts to generate (default 50)
  * @param {boolean} options.bypassCache - Force regeneration even if cached
@@ -240,8 +241,8 @@ export async function generateFromSkills({
     bypassCache = false,
     existingConfig = null
 }) {
-    if (!skillA?.content || !skillB?.content) {
-        throw new Error('Both skill files are required');
+    if (!isSkillReady(skillA) || !isSkillReady(skillB)) {
+        throw new Error('Both skill packages are required');
     }
 
     // Check cache first (only for 'all' generation type)
@@ -254,43 +255,40 @@ export async function generateFromSkills({
         }
     }
 
-    // Build user message with skill contents
-    let userMessage = `Please analyze these two skill files and generate evaluation configuration.
+    // Build user message with structured skill packages.
+    const userMessageParts = [
+        {
+            type: 'text',
+            text: 'Please analyze these two Agent Skill packages and generate evaluation configuration. Preserve package structure in your reasoning: SKILL.md is the entrypoint and supporting files are separate package files.',
+        },
+        ...buildSkillPackageParts(skillA, 'Skill A'),
+        ...buildSkillPackageParts(skillB, 'Skill B'),
+    ];
 
-## Skill A: ${skillA.filename || 'skill-a.md'}
-
-\`\`\`
-${skillA.content}
-\`\`\`
-
-## Skill B: ${skillB.filename || 'skill-b.md'}
-
-\`\`\`
-${skillB.content}
-\`\`\`
-
-`;
+    let generationInstructions = '';
 
     // Add generation-specific instructions
     if (generationType === 'all') {
-        userMessage += `Generate a complete configuration with:
+        generationInstructions += `Generate a complete configuration with:
 - Output type (text/visual/both)
 - 4-6 evaluation criteria with rubrics
 - ${promptCount} test prompts
 
 ${FEW_SHOT_EXAMPLE}`;
     } else if (generationType === 'criteria') {
-        userMessage += `Generate only the evaluation criteria (4-6 criteria with rubrics).
+        generationInstructions += `Generate only the evaluation criteria (4-6 criteria with rubrics).
 Keep outputType as: ${existingConfig?.outputType || 'text'}
 Do not generate prompts, use empty array.`;
     } else if (generationType === 'prompts') {
-        userMessage += `Generate only ${promptCount} test prompts.
+        generationInstructions += `Generate only ${promptCount} test prompts.
 Keep outputType as: ${existingConfig?.outputType || 'text'}
 Do not generate criteria, use empty array.`;
     } else if (generationType === 'outputType') {
-        userMessage += `Determine only the appropriate output type (text/visual/both).
+        generationInstructions += `Determine only the appropriate output type (text/visual/both).
 Do not generate criteria or prompts, use empty arrays.`;
     }
+
+    userMessageParts.push({ type: 'text', text: generationInstructions });
 
     try {
         const response = await callModel({
@@ -298,7 +296,7 @@ Do not generate criteria or prompts, use empty arrays.`;
             apiKeys,
             model,
             systemPrompt: SYSTEM_PROMPT,
-            messages: [{ role: 'user', content: userMessage }],
+            messages: [{ role: 'user', content: userMessageParts }],
             maxTokens: 8192,
             jsonMode: true
         });

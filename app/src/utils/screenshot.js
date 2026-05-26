@@ -1,12 +1,12 @@
 /**
  * Screenshot utilities for visual evaluation
- * Communicates with local Puppeteer screenshot server
+ * Communicates with the local runner for Puppeteer screenshots
  */
 
 const SCREENSHOT_SERVER = 'http://localhost:3001';
 
 /**
- * Check if the screenshot server is running and healthy
+ * Check if the local runner is running and healthy
  * @returns {Promise<{available: boolean, error?: string}>}
  */
 export async function checkServerHealth() {

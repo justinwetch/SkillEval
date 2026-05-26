@@ -16,7 +16,7 @@ function HomeView() {
         {
             icon: FileText,
             title: 'Any Skill, Any Domain',
-            description: 'Compare frontend, backend, writing, analysis, or any custom skill files',
+            description: 'Compare Agent Skill packages, single-file skills, and custom skill bundles',
         },
         {
             icon: BarChart3,
@@ -57,7 +57,7 @@ function HomeView() {
                     className="text-lg text-[var(--color-text-secondary)] leading-relaxed text-center"
                     style={{ maxWidth: '580px', margin: '0 auto 40px auto' }}
                 >
-                    Compare two skill.md files side-by-side. Run the same prompts against both, let an AI judge score the outputs, and see which skill performs better.
+                    Compare two Agent Skill packages side-by-side. Run the same prompts against both, let an AI judge score the outputs, and see which skill performs better.
                 </p>
                 <div className="flex justify-center gap-4">
                     {needsApiKey ? (

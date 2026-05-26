@@ -4,12 +4,13 @@
 
 import { callModel, extractText } from './api';
 import { DEFAULT_GENERATION_MODEL } from './providers';
+import { buildSkillPackageParts, isSkillReady } from './skillPackage';
 
 /**
  * Run a single evaluation
  * @param {Object} options
  * @param {Object} options.apiKeys - API keys keyed by provider
- * @param {string} options.skillContent - Skill file content to use as system prompt addition
+ * @param {Object} options.skill - Agent Skill package to use for this evaluation
  * @param {string} options.baseSystemPrompt - Optional base system prompt
  * @param {string} options.prompt - User prompt to evaluate
  * @param {string} options.model - Model to use for generation
@@ -19,7 +20,7 @@ import { DEFAULT_GENERATION_MODEL } from './providers';
 export async function runSingleEval({
     apiKey,
     apiKeys,
-    skillContent,
+    skill,
     baseSystemPrompt = '',
     prompt,
     model = DEFAULT_GENERATION_MODEL,
@@ -27,10 +28,22 @@ export async function runSingleEval({
 }) {
     const startTime = Date.now();
 
-    // Combine base system prompt with skill content
-    const systemPrompt = baseSystemPrompt
-        ? `${baseSystemPrompt}\n\n${skillContent}`
-        : skillContent;
+    if (!isSkillReady(skill)) {
+        return { content: '', error: 'Valid Agent Skill package is required', elapsed: Date.now() - startTime };
+    }
+
+    const systemPrompt = [
+        baseSystemPrompt,
+        'You are evaluating an Agent Skill package. Follow SKILL.md as the package entrypoint. Treat each referenced file path as a separate file in the skill package, and use supporting references, scripts, assets, and templates when they are relevant to the user request. If scripts are present, reason from their source unless an execution environment is explicitly available.',
+    ].filter(Boolean).join('\n\n');
+
+    const messageContent = [
+        ...buildSkillPackageParts(skill, 'Active Skill Package'),
+        {
+            type: 'text',
+            text: `\n## User Request\n${prompt}`,
+        },
+    ];
 
     try {
         const response = await callModel({
@@ -38,7 +51,7 @@ export async function runSingleEval({
             apiKeys,
             model,
             systemPrompt,
-            messages: [{ role: 'user', content: prompt }],
+            messages: [{ role: 'user', content: messageContent }],
             maxTokens
         });
 
@@ -56,8 +69,8 @@ export async function runSingleEval({
  * Run all evaluations for all prompts, both skills in parallel
  * @param {Object} options
  * @param {Object} options.apiKeys
- * @param {Object} options.skillA - { content }
- * @param {Object} options.skillB - { content }
+ * @param {Object} options.skillA - Agent Skill package
+ * @param {Object} options.skillB - Agent Skill package
  * @param {string[]} options.prompts
  * @param {string} options.model
  * @param {number} options.maxTokens
@@ -100,7 +113,7 @@ export async function runAllEvals({
             runSingleEval({
                 apiKey,
                 apiKeys,
-                skillContent: skillA.content,
+                skill: skillA,
                 baseSystemPrompt,
                 prompt,
                 model,
@@ -117,7 +130,7 @@ export async function runAllEvals({
             runSingleEval({
                 apiKey,
                 apiKeys,
-                skillContent: skillB.content,
+                skill: skillB,
                 baseSystemPrompt,
                 prompt,
                 model,

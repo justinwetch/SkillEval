@@ -23,6 +23,7 @@ import { useSettings } from '../contexts/SettingsContext'
 import { useEvalConfig } from '../contexts/EvalConfigContext'
 import { useEvalRun } from '../contexts/EvalRunContext'
 import { getModel, getModelProvider, getModelsByProvider, PROVIDERS } from '../utils/providers'
+import { createEmptySkill, getSkillSummary, isPlainSkillFile, isSkillReady, isZipFile, loadSkillFile } from '../utils/skillPackage'
 
 function ConfigureView() {
     const navigate = useNavigate()
@@ -56,20 +57,22 @@ function ConfigureView() {
     const [editingPrompt, setEditingPrompt] = useState(null)
     const [newPromptText, setNewPromptText] = useState('')
     const [showAllPrompts, setShowAllPrompts] = useState(false)
+    const [uploadErrors, setUploadErrors] = useState({ A: '', B: '' })
     const modelGroups = getModelsByProvider()
 
     const fileInputARef = useRef(null)
     const fileInputBRef = useRef(null)
 
-    // Handle file upload
     const handleFileUpload = useCallback(async (side, file) => {
         if (!file) return
 
-        const content = await file.text()
-        setSkill(side, {
-            filename: file.name,
-            content
-        })
+        try {
+            setUploadErrors(prev => ({ ...prev, [side]: '' }))
+            const skillPackage = await loadSkillFile(file)
+            setSkill(side, skillPackage)
+        } catch (error) {
+            setUploadErrors(prev => ({ ...prev, [side]: error.message }))
+        }
     }, [setSkill])
 
     // Handle drag and drop
@@ -77,8 +80,10 @@ function ConfigureView() {
         e.preventDefault()
         e.stopPropagation()
         const file = e.dataTransfer?.files?.[0]
-        if (file && (file.name.endsWith('.md') || file.type === 'text/markdown' || file.type === 'text/plain')) {
+        if (file && (isZipFile(file) || isPlainSkillFile(file))) {
             handleFileUpload(side, file)
+        } else if (file) {
+            setUploadErrors(prev => ({ ...prev, [side]: 'Upload a .zip Agent Skill package, .md skill file, or .txt skill file.' }))
         }
     }, [handleFileUpload])
 
@@ -99,8 +104,8 @@ function ConfigureView() {
     const judgeProvider = PROVIDERS[judgeProviderId]
     const judgeModel = getModel(settings.defaultJudgeModel)
     const hasEvaluationState = Boolean(
-        config.skillA.content ||
-        config.skillB.content ||
+        isSkillReady(config.skillA) ||
+        isSkillReady(config.skillB) ||
         config.criteria.length ||
         config.prompts.length ||
         config.outputTypeReasoning ||
@@ -116,6 +121,7 @@ function ConfigureView() {
         setEditingPrompt(null)
         setNewPromptText('')
         setShowAllPrompts(false)
+        setUploadErrors({ A: '', B: '' })
 
         if (fileInputARef.current) fileInputARef.current.value = ''
         if (fileInputBRef.current) fileInputBRef.current.value = ''
@@ -260,7 +266,7 @@ function ConfigureView() {
                             {skillsComplete && <Badge variant="success">Ready</Badge>}
                         </div>
                         <p className="text-sm text-[var(--color-text-secondary)]">
-                            Upload two skill.md files to compare
+                            Upload two Agent Skill packages or skill files to compare
                         </p>
                     </div>
                 </div>
@@ -269,7 +275,11 @@ function ConfigureView() {
                     {['A', 'B'].map((side) => {
                         const skill = side === 'A' ? config.skillA : config.skillB
                         const fileInputRef = side === 'A' ? fileInputARef : fileInputBRef
-                        const hasContent = !!skill.content
+                        const hasContent = isSkillReady(skill)
+                        const summary = getSkillSummary(skill)
+                        const diagnostics = skill.diagnostics || []
+                        const omittedFiles = skill.omittedFiles || []
+                        const uploadError = uploadErrors[side]
 
                         return (
                             <div
@@ -281,45 +291,85 @@ function ConfigureView() {
                                     border rounded-lg p-5 text-center transition-all
                                     ${hasContent
                                         ? 'border-[var(--color-success)] bg-[var(--color-success)]/5'
-                                        : 'border-dashed border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-elevated)] cursor-pointer'
+                                        : uploadError
+                                            ? 'border-dashed border-[var(--color-error)] bg-[var(--color-error)]/5 cursor-pointer'
+                                            : 'border-dashed border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-elevated)] cursor-pointer'
                                     }
                                 `}
                             >
                                 <input
                                     ref={fileInputRef}
                                     type="file"
-                                    accept=".md,.txt"
+                                    accept=".zip,.md,.txt"
                                     className="hidden"
                                     onChange={(e) => handleFileUpload(side, e.target.files?.[0])}
                                 />
 
                                 {hasContent ? (
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <FileText size={18} className="text-[var(--color-success)] flex-shrink-0" />
-                                            <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                                                {skill.filename}
-                                            </span>
+                                    <div className="text-left">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <FileText size={18} className="text-[var(--color-success)] flex-shrink-0" />
+                                                <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                                                    {skill.filename}
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setSkill(side, createEmptySkill())
+                                                    setUploadErrors(prev => ({ ...prev, [side]: '' }))
+                                                }}
+                                                className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded flex-shrink-0"
+                                            >
+                                                <X size={16} className="text-[var(--color-text-muted)]" />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                setSkill(side, { filename: '', content: '' })
-                                            }}
-                                            className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded"
-                                        >
-                                            <X size={16} className="text-[var(--color-text-muted)]" />
-                                        </button>
+                                        <div className="text-xs text-[var(--color-text-muted)] mt-2">
+                                            {summary}
+                                        </div>
+                                        {skill.packageType === 'zip' && (
+                                            <details className="mt-3 text-left">
+                                                <summary className="text-xs text-[var(--color-text-secondary)] cursor-pointer">
+                                                    Package files
+                                                </summary>
+                                                <div className="mt-2 max-h-32 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-2 text-[11px] text-[var(--color-text-muted)]">
+                                                    {skill.files.map(file => (
+                                                        <div key={file.path} className="truncate">
+                                                            {file.path}
+                                                        </div>
+                                                    ))}
+                                                    {omittedFiles.map(file => (
+                                                        <div key={`omitted-${file.path}`} className="truncate">
+                                                            {file.path} · omitted
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </details>
+                                        )}
+                                        {diagnostics.length > 0 && (
+                                            <div className="mt-2 text-xs text-[var(--color-warning)]">
+                                                {diagnostics[0]}
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <>
-                                        <Upload size={20} className="text-[var(--color-text-muted)] mx-auto mb-2" strokeWidth={1.5} />
+                                        <Upload size={20} className={`
+                                            mx-auto mb-2
+                                            ${uploadError ? 'text-[var(--color-error)]' : 'text-[var(--color-text-muted)]'}
+                                        `} strokeWidth={1.5} />
                                         <div className="text-sm font-medium text-[var(--color-text-primary)] mb-0.5">
                                             Skill {side}
                                         </div>
                                         <div className="text-xs text-[var(--color-text-muted)]">
-                                            Drop file or click
+                                            Drop .zip, .md, or .txt
                                         </div>
+                                        {uploadError && (
+                                            <div className="text-xs text-[var(--color-error)] mt-2">
+                                                {uploadError}
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </div>
