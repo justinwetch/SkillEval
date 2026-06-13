@@ -23,9 +23,23 @@ export const PROVIDERS = {
         keyUrl: 'https://aistudio.google.com/app/apikey',
         keyHost: 'aistudio.google.com',
     },
+    xai: {
+        id: 'xai',
+        label: 'xAI',
+        keyLabel: 'xAI API Key',
+        keyPlaceholder: 'xai-...',
+        keyUrl: 'https://console.x.ai',
+        keyHost: 'console.x.ai',
+    },
 }
 
 export const MODELS = [
+    {
+        value: 'claude-opus-4-8',
+        label: 'Claude Opus 4.8',
+        provider: 'anthropic',
+        speed: 'Powerful',
+    },
     {
         value: 'claude-haiku-4-5-20251001',
         label: 'Claude Haiku 4.5',
@@ -37,12 +51,6 @@ export const MODELS = [
         label: 'Claude Sonnet 4.6',
         provider: 'anthropic',
         speed: 'Balanced',
-    },
-    {
-        value: 'claude-opus-4-7',
-        label: 'Claude Opus 4.7',
-        provider: 'anthropic',
-        speed: 'Powerful',
     },
     {
         value: 'gpt-5.5',
@@ -81,6 +89,18 @@ export const MODELS = [
         speed: 'Balanced',
     },
     {
+        value: 'gemini-3-flash-preview',
+        label: 'Gemini 3 Flash Preview',
+        provider: 'gemini',
+        speed: 'Powerful',
+    },
+    {
+        value: 'gemini-3.1-flash-lite',
+        label: 'Gemini 3.1 Flash-Lite',
+        provider: 'gemini',
+        speed: 'Fastest',
+    },
+    {
         value: 'gemini-2.5-pro',
         label: 'Gemini 2.5 Pro',
         provider: 'gemini',
@@ -98,16 +118,27 @@ export const MODELS = [
         provider: 'gemini',
         speed: 'Fastest',
     },
+    {
+        value: 'grok-4.3',
+        label: 'Grok 4.3',
+        provider: 'xai',
+        speed: 'Powerful',
+    },
 ]
 
 export const DEFAULT_GENERATION_MODEL = 'claude-sonnet-4-6'
-export const DEFAULT_JUDGE_MODEL = 'claude-opus-4-7'
+export const DEFAULT_JUDGE_MODEL = 'claude-opus-4-8'
 
 const MODEL_MIGRATIONS = {
     'claude-sonnet-4-6-20260217': 'claude-sonnet-4-6',
-    'claude-opus-4-6-20260205': 'claude-opus-4-7',
+    'claude-opus-4-6-20260205': 'claude-opus-4-8',
+    'claude-opus-4-7': 'claude-opus-4-8',
     'claude-sonnet-4-5-20250929': 'claude-sonnet-4-6',
-    'claude-opus-4-5-20251101': 'claude-opus-4-7',
+    'claude-opus-4-5-20251101': 'claude-opus-4-8',
+    'gemini-3.1-pro': 'gemini-3.1-pro-preview',
+    'gemini-3-flash': 'gemini-3-flash-preview',
+    'grok-4.3-latest': 'grok-4.3',
+    'grok-latest': 'grok-4.3',
 }
 
 export function normalizeModelId(model) {
@@ -125,6 +156,7 @@ export function inferProviderFromModel(model) {
     if (normalized.startsWith('claude-')) return 'anthropic'
     if (normalized.startsWith('gpt-') || normalized.startsWith('o')) return 'openai'
     if (normalized.startsWith('gemini-')) return 'gemini'
+    if (normalized.startsWith('grok-')) return 'xai'
 
     return null
 }

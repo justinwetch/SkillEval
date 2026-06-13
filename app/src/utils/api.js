@@ -2,6 +2,7 @@ import { getModelProvider, normalizeModelId, PROVIDERS, DEFAULT_GENERATION_MODEL
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
+const XAI_RESPONSES_URL = 'https://api.x.ai/v1/responses'
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 function getApiKey({ apiKey, apiKeys, provider }) {
@@ -159,11 +160,58 @@ export async function callOpenAI({
 }) {
     assertApiKey(apiKey, 'openai')
 
+    return callResponsesApi({
+        apiKey,
+        model,
+        systemPrompt,
+        messages,
+        maxTokens,
+        jsonMode,
+        url: OPENAI_RESPONSES_URL,
+        provider: 'openai',
+        systemRole: 'developer',
+    })
+}
+
+export async function callXAI({
+    apiKey,
+    model = 'grok-4.3',
+    systemPrompt,
+    messages,
+    maxTokens = 8192,
+    jsonMode = false,
+}) {
+    assertApiKey(apiKey, 'xai')
+
+    return callResponsesApi({
+        apiKey,
+        model,
+        systemPrompt,
+        messages,
+        maxTokens,
+        jsonMode,
+        url: XAI_RESPONSES_URL,
+        provider: 'xai',
+        systemRole: 'system',
+    })
+}
+
+async function callResponsesApi({
+    apiKey,
+    model,
+    systemPrompt,
+    messages,
+    maxTokens,
+    jsonMode,
+    url,
+    provider,
+    systemRole,
+}) {
     const input = []
 
     if (systemPrompt) {
         input.push({
-            role: 'developer',
+            role: systemRole,
             content: systemPrompt,
         })
     }
@@ -185,7 +233,11 @@ export async function callOpenAI({
         body.text = { format: { type: 'json_object' } }
     }
 
-    const response = await fetch(OPENAI_RESPONSES_URL, {
+    if (provider === 'xai') {
+        body.store = false
+    }
+
+    const response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -195,7 +247,8 @@ export async function callOpenAI({
     })
 
     if (!response.ok) {
-        throw new Error(await parseErrorResponse(response))
+        const providerLabel = PROVIDERS[provider]?.label || provider
+        throw new Error(`${providerLabel}: ${await parseErrorResponse(response)}`)
     }
 
     const data = await response.json()
@@ -268,6 +321,10 @@ export async function callModel({
 
     if (resolvedProvider === 'gemini') {
         return callGemini({ ...options, apiKey: resolvedApiKey, model: normalizedModel })
+    }
+
+    if (resolvedProvider === 'xai') {
+        return callXAI({ ...options, apiKey: resolvedApiKey, model: normalizedModel })
     }
 
     return callAnthropic({ ...options, apiKey: resolvedApiKey, model: normalizedModel })

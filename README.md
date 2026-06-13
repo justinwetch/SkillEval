@@ -12,6 +12,10 @@ For the full story on how this started and why data-driven skill development mat
 
 ## v1.2 Update
 
+### v1.2.1
+
+Skill Evaluator v1.2.1 refreshes the supported frontier model list with Claude Opus 4.8, newer Gemini options, and Grok 4.3 through xAI. It also removes disabled Anthropic Fable access, migrates older saved Opus defaults to Opus 4.8, and validates saved defaults so unsupported model IDs fall back safely.
+
 Skill Evaluator v1.2 adds support for zipped Agent Skill packages. You can now upload a standard `.zip` skill package with a root `SKILL.md`, and Skill Evaluator will preserve its separate references, scripts, assets, and supporting files when generating configs and running evaluations.
 
 Single-file `.md` and `.txt` skills still work as before, but internally they are treated as one-file Agent Skill packages so both upload paths use the same evaluation model.
@@ -20,7 +24,7 @@ Single-file `.md` and `.txt` skills still work as before, but internally they ar
 
 ## v1.1 Update
 
-Skill Evaluator v1.1 adds support for the latest Anthropic, OpenAI, and Google models, expanding the app beyond Anthropic-only workflows. Model selection now supports provider-specific API keys, cross-provider choices, and separate defaults for skill output generation and judge scoring.
+Skill Evaluator v1.1 adds support for current Anthropic, OpenAI, Google, and xAI models, expanding the app beyond Anthropic-only workflows. Model selection now supports provider-specific API keys, cross-provider choices, and separate defaults for skill output generation and judge scoring.
 
 This release also introduces a refreshed design language, with cleaner surfaces, tighter controls, restrained depth, and fully considered light and dark modes.
 
@@ -64,7 +68,7 @@ Light:
 Dark:
 ![Results - Per-criterion breakdown in dark mode](screenshots/dark/evaluate%20results%202.png)
 
-**Settings** — Manage provider keys for Anthropic, OpenAI, and Gemini, then set default models for configuration, generation, and judging.
+**Settings** — Manage provider keys for Anthropic, OpenAI, Gemini, and xAI, then set default models for configuration, generation, and judging.
 
 Light:
 ![Settings - provider keys and default models in light mode](screenshots/settings.png)
@@ -83,6 +87,7 @@ Dark:
   - Anthropic ([console.anthropic.com](https://console.anthropic.com/))
   - OpenAI ([platform.openai.com](https://platform.openai.com/api-keys))
   - Gemini ([aistudio.google.com](https://aistudio.google.com/app/apikey))
+  - xAI ([console.x.ai](https://console.x.ai/))
 
 ### Clone and Setup
 
@@ -119,15 +124,17 @@ Choose models deliberately for the two major phases. The Output model runs both 
 
 | Model | Provider | Characteristics |
 |-------|----------|-----------------|
+| **Claude Opus 4.8** | Anthropic | Strong model for criteria, prompts, and judging (default judge) |
 | **Claude Sonnet 4.6** | Anthropic | Balanced capability and speed (default output generation) |
-| **Claude Opus 4.7** | Anthropic | Strong model for criteria, prompts, and judging (default judge) |
 | **Claude Haiku 4.5** | Anthropic | Fast, cost-effective, good for iteration |
 | **GPT-5.5** | OpenAI | Frontier model for complex reasoning and coding |
 | **GPT-5.4 Mini / Nano** | OpenAI | Lower-latency, lower-cost OpenAI options |
 | **Gemini 3.5 Flash** | Gemini | Stable Gemini model for sustained coding and agentic tasks |
 | **Gemini 3.1 Pro Preview** | Gemini | Advanced Gemini Pro option |
+| **Gemini 3 Flash Preview / 3.1 Flash-Lite** | Gemini | Newer Gemini speed/capability options for agentic and lightweight workloads |
+| **Grok 4.3** | xAI | xAI flagship text and image-input model via the Responses API |
 
-For judging, **Claude Opus 4.7** is the default because strong reasoning is useful for criteria, prompts, and nuanced scoring. Claude Sonnet 4.6 is the default for skill output generation. OpenAI and Gemini models are available in the same selectors when their provider keys are configured.
+For judging, **Claude Opus 4.8** is the default because strong reasoning is useful for criteria, prompts, and nuanced scoring. Claude Sonnet 4.6 is the default for skill output generation. Anthropic, OpenAI, Gemini, and xAI models are available in the same selectors when their provider keys are configured.
 
 ---
 

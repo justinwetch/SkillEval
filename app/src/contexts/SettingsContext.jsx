@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import {
     DEFAULT_GENERATION_MODEL,
     DEFAULT_JUDGE_MODEL,
+    getModel,
     getModelProvider,
     normalizeModelId,
     PROVIDERS,
@@ -36,6 +37,11 @@ function parseStoredApiKeys() {
     }
 }
 
+function normalizeStoredModel(model, fallback) {
+    const normalized = normalizeModelId(model || fallback)
+    return getModel(normalized) ? normalized : fallback
+}
+
 export function SettingsProvider({ children }) {
     const [settings, setSettings] = useState(() => {
         const savedApiKeys = parseStoredApiKeys()
@@ -50,8 +56,8 @@ export function SettingsProvider({ children }) {
                 ...savedApiKeys,
                 anthropic: savedApiKeys.anthropic || legacyAnthropicKey,
             },
-            defaultGenModel: normalizeModelId(storedGenModel || DEFAULT_SETTINGS.defaultGenModel),
-            defaultJudgeModel: normalizeModelId(storedJudgeModel || storedConfigModel || DEFAULT_SETTINGS.defaultJudgeModel),
+            defaultGenModel: normalizeStoredModel(storedGenModel, DEFAULT_SETTINGS.defaultGenModel),
+            defaultJudgeModel: normalizeStoredModel(storedJudgeModel || storedConfigModel, DEFAULT_SETTINGS.defaultJudgeModel),
             theme: localStorage.getItem(STORAGE_KEYS.THEME) || DEFAULT_SETTINGS.theme,
         }
     })
