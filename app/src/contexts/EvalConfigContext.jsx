@@ -5,7 +5,7 @@
  */
 
 import { createContext, useContext, useState, useCallback } from 'react';
-import { generateFromSkills, FALLBACK_CONFIG } from '../utils/generateConfig';
+import { generateFromSkills } from '../utils/generateConfig';
 import { useSettings } from './SettingsContext';
 import { useLlmHub } from './LlmHubContext';
 

@@ -129,6 +129,23 @@ SkillEval/
 
 ---
 
+## Contributor Navigation
+
+For repo ownership and change-routing rules:
+
+- `AGENTS.md` - operational editing rules for agents
+- `docs/repo-map.md` - current ownership map and "look here first" guide
+
+For context:
+
+- `ARCHITECTURE.md` - historical planning context, not current file ownership
+- `app/README.md` - frontend workspace note
+
+When product docs and historical plans differ from the current code, use
+`AGENTS.md`, `docs/repo-map.md`, and the current source tree first.
+
+---
+
 ## Contributing
 
 Contributions welcome! Open an issue for bugs, feature requests, or to share interesting skill files you've tested.

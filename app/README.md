@@ -1,16 +1,34 @@
-# React + Vite
+# SkillEval Frontend Workspace
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This folder contains the React/Vite frontend for SkillEval.
 
-Currently, two official plugins are available:
+Use these docs in this order:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. `../AGENTS.md`
+2. `../docs/repo-map.md`
+3. `../README.md`
 
-## React Compiler
+This file is a local workspace note. It does not override the root repo map.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Commands
 
-## Expanding the ESLint configuration
+From `app/`:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm install
+npm run dev
+npm run lint
+npm run build
+```
+
+## Source Ownership Summary
+
+- `src/views/` - screen-level UI and page-local interactions
+- `src/components/` - reusable UI pieces
+- `src/contexts/` - shared persisted state and workflow orchestration
+- `src/utils/` - focused helpers and service boundaries
+- `src/App.jsx` - route/provider composition
+- `src/main.jsx` - bootstrap render
+- `dist/` - generated output; do not edit directly
+
+For the detailed file-level map, use `../docs/repo-map.md`.

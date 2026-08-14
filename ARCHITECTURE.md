@@ -1,5 +1,9 @@
 # 🧪 Skill Evaluator: Architecture & Development Plan
 
+> Historical note: this document captures an earlier transformation plan and is
+> kept for context. For current file ownership and change routing, use
+> `AGENTS.md` and `docs/repo-map.md`.
+
 > A high-level planning document for transforming the Multi-Eval Skill Comparison Tool into the open-source **Skill Evaluator** project.
 
 ---
