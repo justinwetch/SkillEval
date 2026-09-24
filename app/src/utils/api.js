@@ -152,7 +152,7 @@ export async function callAnthropic({
 
 export async function callOpenAI({
     apiKey,
-    model = 'gpt-5.5',
+    model = 'gpt-5.6-sol',
     systemPrompt,
     messages,
     maxTokens = 8192,
@@ -175,7 +175,7 @@ export async function callOpenAI({
 
 export async function callXAI({
     apiKey,
-    model = 'grok-4.3',
+    model = 'grok-4.7',
     systemPrompt,
     messages,
     maxTokens = 8192,
@@ -258,7 +258,7 @@ async function callResponsesApi({
 
 export async function callGemini({
     apiKey,
-    model = 'gemini-3.5-flash',
+    model = 'gemini-3.8-flash',
     systemPrompt,
     messages,
     maxTokens = 8192,
