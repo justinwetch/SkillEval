@@ -35,6 +35,24 @@ export const PROVIDERS = {
 
 export const MODELS = [
     {
+        value: 'claude-fable-5-1',
+        label: 'Claude Fable 5.1',
+        provider: 'anthropic',
+        speed: 'Most capable',
+    },
+    {
+        value: 'claude-opus-5-5',
+        label: 'Claude Opus 5.5',
+        provider: 'anthropic',
+        speed: 'Powerful',
+    },
+    {
+        value: 'claude-sonnet-5',
+        label: 'Claude Sonnet 5',
+        provider: 'anthropic',
+        speed: 'Balanced',
+    },
+    {
         value: 'claude-opus-4-8',
         label: 'Claude Opus 4.8',
         provider: 'anthropic',
@@ -51,6 +69,42 @@ export const MODELS = [
         label: 'Claude Sonnet 4.6',
         provider: 'anthropic',
         speed: 'Balanced',
+    },
+    {
+        value: 'gpt-6-astra',
+        label: 'GPT-6 Astra',
+        provider: 'openai',
+        speed: 'Most capable',
+    },
+    {
+        value: 'gpt-6-sol',
+        label: 'GPT-6 Sol',
+        provider: 'openai',
+        speed: 'Balanced',
+    },
+    {
+        value: 'gpt-6-luna',
+        label: 'GPT-6 Luna',
+        provider: 'openai',
+        speed: 'Fast',
+    },
+    {
+        value: 'gpt-5.6-sol',
+        label: 'GPT-5.6 Sol',
+        provider: 'openai',
+        speed: 'Powerful',
+    },
+    {
+        value: 'gpt-5.6-terra',
+        label: 'GPT-5.6 Terra',
+        provider: 'openai',
+        speed: 'Balanced',
+    },
+    {
+        value: 'gpt-5.6-luna',
+        label: 'GPT-5.6 Luna',
+        provider: 'openai',
+        speed: 'Fast',
     },
     {
         value: 'gpt-5.5',
@@ -75,6 +129,12 @@ export const MODELS = [
         label: 'GPT-5.4 Nano',
         provider: 'openai',
         speed: 'Fastest',
+    },
+    {
+        value: 'gemini-3.8-flash',
+        label: 'Gemini 3.8 Flash',
+        provider: 'gemini',
+        speed: 'Balanced',
     },
     {
         value: 'gemini-3.1-pro-preview',
@@ -119,6 +179,12 @@ export const MODELS = [
         speed: 'Fastest',
     },
     {
+        value: 'grok-4.7',
+        label: 'Grok 4.7',
+        provider: 'xai',
+        speed: 'Powerful',
+    },
+    {
         value: 'grok-4.3',
         label: 'Grok 4.3',
         provider: 'xai',
@@ -126,8 +192,8 @@ export const MODELS = [
     },
 ]
 
-export const DEFAULT_GENERATION_MODEL = 'claude-sonnet-4-6'
-export const DEFAULT_JUDGE_MODEL = 'claude-opus-4-8'
+export const DEFAULT_GENERATION_MODEL = 'claude-sonnet-5'
+export const DEFAULT_JUDGE_MODEL = 'claude-opus-5-5'
 
 const MODEL_MIGRATIONS = {
     'claude-sonnet-4-6-20260217': 'claude-sonnet-4-6',
@@ -138,7 +204,8 @@ const MODEL_MIGRATIONS = {
     'gemini-3.1-pro': 'gemini-3.1-pro-preview',
     'gemini-3-flash': 'gemini-3-flash-preview',
     'grok-4.3-latest': 'grok-4.3',
-    'grok-latest': 'grok-4.3',
+    'grok-latest': 'grok-4.7',
+    'gpt-5.6': 'gpt-5.6-sol',
 }
 
 export function normalizeModelId(model) {

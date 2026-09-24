@@ -10,11 +10,15 @@ For the full story on how this started and why data-driven skill development mat
 
 ---
 
+## Current model catalog (September 2026)
+
+The model selectors now include Claude Fable 5.1, Opus 5.5, and Sonnet 5; GPT-6 Astra, Sol, and Luna; Gemini 3.8 Flash; and Grok 4.7. GPT-5.6 and other earlier listed models remain selectable for existing evaluations. New installations default to Claude Sonnet 5 for output and Claude Opus 5.5 for judging. Previously saved supported model choices are preserved.
+
 ## v1.2 Update
 
 ### v1.2.1
 
-Skill Evaluator v1.2.1 refreshes the supported frontier model list with Claude Opus 4.8, newer Gemini options, and Grok 4.3 through xAI. It also removes disabled Anthropic Fable access, migrates older saved Opus defaults to Opus 4.8, and validates saved defaults so unsupported model IDs fall back safely.
+Skill Evaluator v1.2.1 refreshed the supported frontier model list with Claude Opus 4.8, newer Gemini options, and Grok 4.3 through xAI. At that release, it removed disabled Anthropic Fable access, migrated older saved Opus defaults to Opus 4.8, and validated saved defaults so unsupported model IDs fell back safely.
 
 Skill Evaluator v1.2 adds support for zipped Agent Skill packages. You can now upload a standard `.zip` skill package with a root `SKILL.md`, and Skill Evaluator will preserve its separate references, scripts, assets, and supporting files when generating configs and running evaluations.
 
@@ -124,17 +128,19 @@ Choose models deliberately for the two major phases. The Output model runs both 
 
 | Model | Provider | Characteristics |
 |-------|----------|-----------------|
-| **Claude Opus 4.8** | Anthropic | Strong model for criteria, prompts, and judging (default judge) |
-| **Claude Sonnet 4.6** | Anthropic | Balanced capability and speed (default output generation) |
+| **Claude Fable 5.1** | Anthropic | Highest capability option for demanding evaluations |
+| **Claude Opus 5.5** | Anthropic | Strong model for criteria, prompts, and judging (default judge) |
+| **Claude Sonnet 5** | Anthropic | Balanced capability and speed (default output generation) |
 | **Claude Haiku 4.5** | Anthropic | Fast, cost-effective, good for iteration |
-| **GPT-5.5** | OpenAI | Frontier model for complex reasoning and coding |
-| **GPT-5.4 Mini / Nano** | OpenAI | Lower-latency, lower-cost OpenAI options |
-| **Gemini 3.5 Flash** | Gemini | Stable Gemini model for sustained coding and agentic tasks |
+| **GPT-6 Astra / Sol / Luna** | OpenAI | Highest capability, balanced, and cost-sensitive options |
+| **Gemini 3.8 Flash** | Gemini | Stable model for coding and agentic tasks |
 | **Gemini 3.1 Pro Preview** | Gemini | Advanced Gemini Pro option |
-| **Gemini 3 Flash Preview / 3.1 Flash-Lite** | Gemini | Newer Gemini speed/capability options for agentic and lightweight workloads |
-| **Grok 4.3** | xAI | xAI flagship text and image-input model via the Responses API |
+| **Gemini 3.1 Flash-Lite** | Gemini | Lightweight option |
+| **Grok 4.7** | xAI | Frontier text and image-input model via the Responses API |
 
-For judging, **Claude Opus 4.8** is the default because strong reasoning is useful for criteria, prompts, and nuanced scoring. Claude Sonnet 4.6 is the default for skill output generation. Anthropic, OpenAI, Gemini, and xAI models are available in the same selectors when their provider keys are configured.
+For judging, **Claude Opus 5.5** is the default because strong reasoning is useful for criteria, prompts, and nuanced scoring. Claude Sonnet 5 is the default for skill output generation. Anthropic, OpenAI, Gemini, and xAI models are available in the same selectors when their provider keys are configured. Model availability can vary by account; an API key and provider access are required. Preview models may change or be retired.
+
+Model IDs and availability were checked against the [Claude model catalog](https://platform.claude.com/docs/en/models/overview), [OpenAI model catalog](https://developers.openai.com/api/docs/models), [Gemini model catalog](https://ai.google.dev/gemini-api/docs/models), and [xAI Grok 4.7 documentation](https://docs.x.ai/developers/models/grok-4.7).
 
 ---
 
