@@ -12,7 +12,7 @@ For the full story on how this started and why data-driven skill development mat
 
 ## Current model catalog (September 2026)
 
-The model selectors now include Claude Fable 5.1, Opus 5.5, and Sonnet 5; GPT-5.6 Sol, Terra, and Luna; Gemini 3.8 Flash; and Grok 4.7. Older listed models remain selectable for existing evaluations. New installations default to Claude Sonnet 5 for output and Claude Opus 5.5 for judging. Previously saved supported model choices are preserved.
+The model selectors now include Claude Fable 5.1, Opus 5.5, and Sonnet 5; GPT-6 Astra, Sol, and Luna; Gemini 3.8 Flash; and Grok 4.7. GPT-5.6 and other earlier listed models remain selectable for existing evaluations. New installations default to Claude Sonnet 5 for output and Claude Opus 5.5 for judging. Previously saved supported model choices are preserved.
 
 ## v1.2 Update
 
@@ -132,7 +132,7 @@ Choose models deliberately for the two major phases. The Output model runs both 
 | **Claude Opus 5.5** | Anthropic | Strong model for criteria, prompts, and judging (default judge) |
 | **Claude Sonnet 5** | Anthropic | Balanced capability and speed (default output generation) |
 | **Claude Haiku 4.5** | Anthropic | Fast, cost-effective, good for iteration |
-| **GPT-5.6 Sol / Terra / Luna** | OpenAI | Frontier, balanced, and cost-sensitive options |
+| **GPT-6 Astra / Sol / Luna** | OpenAI | Highest capability, balanced, and cost-sensitive options |
 | **Gemini 3.8 Flash** | Gemini | Stable model for coding and agentic tasks |
 | **Gemini 3.1 Pro Preview** | Gemini | Advanced Gemini Pro option |
 | **Gemini 3.1 Flash-Lite** | Gemini | Lightweight option |
@@ -140,7 +140,7 @@ Choose models deliberately for the two major phases. The Output model runs both 
 
 For judging, **Claude Opus 5.5** is the default because strong reasoning is useful for criteria, prompts, and nuanced scoring. Claude Sonnet 5 is the default for skill output generation. Anthropic, OpenAI, Gemini, and xAI models are available in the same selectors when their provider keys are configured. Model availability can vary by account; an API key and provider access are required. Preview models may change or be retired.
 
-Model IDs and availability were checked against the [Claude model catalog](https://platform.claude.com/docs/en/models/overview), [OpenAI model catalog](https://platform.openai.com/docs/models), [Gemini model catalog](https://ai.google.dev/gemini-api/docs/models), and [xAI Grok 4.7 documentation](https://docs.x.ai/developers/models/grok-4.7).
+Model IDs and availability were checked against the [Claude model catalog](https://platform.claude.com/docs/en/models/overview), [OpenAI model catalog](https://developers.openai.com/api/docs/models), [Gemini model catalog](https://ai.google.dev/gemini-api/docs/models), and [xAI Grok 4.7 documentation](https://docs.x.ai/developers/models/grok-4.7).
 
 ---
 

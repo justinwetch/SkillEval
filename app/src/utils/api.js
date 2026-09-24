@@ -152,7 +152,7 @@ export async function callAnthropic({
 
 export async function callOpenAI({
     apiKey,
-    model = 'gpt-5.6-sol',
+    model = 'gpt-6-sol',
     systemPrompt,
     messages,
     maxTokens = 8192,

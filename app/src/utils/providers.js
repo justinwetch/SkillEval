@@ -71,6 +71,24 @@ export const MODELS = [
         speed: 'Balanced',
     },
     {
+        value: 'gpt-6-astra',
+        label: 'GPT-6 Astra',
+        provider: 'openai',
+        speed: 'Most capable',
+    },
+    {
+        value: 'gpt-6-sol',
+        label: 'GPT-6 Sol',
+        provider: 'openai',
+        speed: 'Balanced',
+    },
+    {
+        value: 'gpt-6-luna',
+        label: 'GPT-6 Luna',
+        provider: 'openai',
+        speed: 'Fast',
+    },
+    {
         value: 'gpt-5.6-sol',
         label: 'GPT-5.6 Sol',
         provider: 'openai',
